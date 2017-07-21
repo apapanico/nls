@@ -92,17 +92,17 @@ def minvar_nls_oracle(X, S, Sigma, isotonic=False, trace=False,
     L, U = eig(S)
     alpha = U.T.dot(np.ones(N))
     C = U.T.dot(Sigma).dot(U)
-    A = C * alpha
     if isotonic:
         # Solve linear system with isotonic constraints
         _, d_kfold = nls_kfold_cv(X, S, 10)
         d_isokfold = isotonic_regression(d_kfold)
         trace = np.sum(d_isokfold) if trace else None
         d_min, d_max = L[-1], L[0]
-        d = minvar_nls_nlsq_new([C], [alpha], trace,
-                                d_isokfold, d_min, d_max, upper_bound)
+        d = minvar_nls_nlsq_new2([C], [alpha], trace,
+                                 d_isokfold, d_min, d_max, upper_bound)
     else:
         # Solve plain vanilla linear system
+        A = C * alpha
         z = np.linalg.solve(A, alpha)
         d = 1. / z
     return U, d
@@ -138,7 +138,7 @@ def minvar_nls_kfold_oracle(X, S, Sigma, K, progress=False,
     d_isokfold = isotonic_regression(d_kfold)
     trace = np.sum(d_isokfold) if trace else None
     d_min, d_max = L[-1], L[0]
-    d = minvar_nls_nlsq_new(
+    d = minvar_nls_nlsq_new2(
         C_list, alpha_list, trace, d_isokfold, d_min, d_max, upper_bound)
 
     return U, d
@@ -174,7 +174,7 @@ def minvar_nls_kfold(X, S, K, progress=False, trace=False,
     d_isokfold = isotonic_regression(d_kfold)
     trace = np.sum(d_isokfold) if trace else None
     d_min, d_max = L[-1], L[0]
-    d = minvar_nls_nlsq_new(
+    d = minvar_nls_nlsq_new2(
         C_list, alpha_list, trace, d_isokfold, d_min, d_max, upper_bound)
 
     return U, d
@@ -445,3 +445,100 @@ def minvar_nls_nlsq_new(C_list, alpha_list, trace, d0,
         bounds=bounds, iprint=0)
 
     return x
+
+
+def minvar_nls_nlsq_new2(C_list, alpha_list, trace, d0,
+                         d_min, d_max, upper_bound):
+    """Solve an Non-linear LS problem via SLSQP."""
+
+    N = len(alpha_list[0])
+
+    dinv = np.zeros(N)
+    alpha_sq_list = [alpha**2 for alpha in alpha_list]
+    A_list = [
+        C * alpha.reshape(1, N) * alpha.reshape(N, 1)
+        for C, alpha in zip(C_list, alpha_list)
+    ]
+    tmp1 = np.zeros(N)
+    tmp2 = np.zeros(N)
+    tmp3 = np.zeros(N)
+    T1_d = np.zeros(N)
+    T2_d = np.zeros(N)
+    g_tmp = np.zeros(N)
+    g = np.zeros(N)
+
+    def G(d):
+        return np.ediff1d(d, to_end=d[-1])
+
+    def Ginv(z, transpose=False):
+        if not transpose:
+            return np.cumsum(z[::-1])[::-1]
+        else:
+            return np.cumsum(z)
+
+    def obj(z):
+        d = Ginv(z)
+        np.divide(1., d, out=dinv)
+        f = 0.
+        for A, alpha_sq in zip(A_list, alpha_sq_list):
+            T1 = dinv.dot(alpha_sq)
+            np.dot(A, dinv, out=tmp1)
+            T2 = dinv.T.dot(tmp1)
+            f += (1 - T2 / T1)**2
+        return f
+
+    def grad(z):
+        d = Ginv(z)
+        g.fill(0.)
+        np.divide(1., d, out=dinv)
+        for A, alpha_sq in zip(A_list, alpha_sq_list):
+            T1 = dinv.dot(alpha_sq)
+            np.dot(A, dinv, out=tmp1)
+            T2 = dinv.T.dot(tmp1)
+
+            np.power(dinv, 2, out=tmp2)
+            np.multiply(alpha_sq, tmp2, out=T1_d)
+            np.multiply(tmp1, tmp2, out=T2_d)
+            np.multiply(T2_d, 2., out=T2_d)
+
+            np.divide(T2_d, T1, out=tmp1)
+            np.multiply(T1_d, T2 / T1**2, out=tmp2)
+            np.subtract(tmp1, tmp2, out=tmp3)
+            np.multiply(tmp3, 2 * (1 - T2 / T1), out=g_tmp)
+            np.add(g, g_tmp, out=g)
+        return Ginv(g, transpose=True)
+
+    bounds = [(0., None) for _ in range(N - 1)] + [(d_min, None)]
+
+    if trace is None:
+        trace_con, trace_con_grad = None, None
+    else:
+        v = np.arange(1., N + 1.)
+
+        def trace_con(z):
+            return v.T.dot(z) - trace
+
+        def trace_con_grad(z):
+            return v
+
+    if upper_bound:
+        u = -np.ones(N)
+
+        def ub_con(z):
+            return d_max + u.T.dot(z)
+
+        def ub_con_grad(z):
+            return u
+    else:
+        ub_con, ub_con_grad = None, None
+
+    from scipy.optimize.slsqp import fmin_slsqp
+
+    z_star = fmin_slsqp(
+        obj, d0, fprime=grad,
+        f_eqcons=trace_con, fprime_eqcons=trace_con_grad,
+        f_ieqcons=ub_con, fprime_ieqcons=ub_con_grad,
+        bounds=bounds, iprint=0)
+
+    d_star = Ginv(z_star)
+    return d_star
