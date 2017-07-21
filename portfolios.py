@@ -9,7 +9,7 @@ def equal_portfolio(Sigma):
     return np.full(N, 1. / N)
 
 
-def min_var_portfolio(Sigma, leverage=1., gamma=0.0):
+def min_var_portfolio(Sigma, leverage=1., gamma=None):
     """
     Computes the minimum variance portfolio.
     Note: As the variance is not invariant with respect
@@ -59,3 +59,6 @@ def min_var_portfolio(Sigma, leverage=1., gamma=0.0):
         warnings.warn("Convergence problem")
 
     return np.array(sol['x']).ravel()
+
+
+portfolio_funs = {'eq': equal_portfolio, 'minvar': min_var_portfolio}
