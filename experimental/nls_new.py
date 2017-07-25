@@ -9,10 +9,43 @@ from tqdm import tqdm
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import yaml
 
+from cov import nlshrink_covariance
+
+from portfolios import min_var_portfolio
 from utils import *
 from models import *
-from shrinkage import *
+from shrinkage_new import *
+from shrinkage_new import _nls_cv, _minvar_nlsq
+
+from classes import Simulation
+
+
+def parse_kwarg_input(s):
+    if '-' in s:
+        cov_fun, kwargs = s.split('-')
+        cov_fun = cov_fun.lower()
+        kwargs = yaml.load(kwargs.replace(':', ': '))
+        if kwargs is None:
+            kwargs = {}
+    else:
+        cov_fun = s.lower()
+        kwargs = {}
+    return cov_fun, kwargs
+
+
+class FunctionKwargParamType(click.ParamType):
+    name = 'mixed'
+
+    def convert(self, value, param, ctx):
+        try:
+            return parse_kwarg_input(value)
+        except Exception:
+            self.fail('%s is not a valid input' % value, param, ctx)
+
+
+FUNCTION_KWARG = FunctionKwargParamType()
 
 
 @click.group()
@@ -21,74 +54,95 @@ def cli():
 
 
 @cli.command()
-@click.option('--N', type=int, default=100)
+@click.option('--N', 'N', type=int, default=100)
 @click.option('--y', type=int, default=2)
-@click.option('--cov_fun', default='slr')
+@click.option('--cov_fun', 'cov_fun_kwargs',
+              type=FUNCTION_KWARG, default='slr-{}')
 @click.option('--loo/--no-loo', default=True)
-@click.option('--K', type=int, default=10)
+@click.option('--K', 'K', type=int, default=10)
 @click.option('--ylim', nargs=2, type=float, default=(0., .25))
 @click.option('--figsize', nargs=2, type=float, default=(16, 8))
 @click.option('--seed', type=int, default=3910)
-def demo(n, y, cov_fun, loo, k, ylim, figsize, seed):
+@click.option('--trace/--no-trace', default=True)
+@click.option('--upper_bound/--no-upper_bound', default=True)
+def demo(N, y, cov_fun_kwargs, loo, K, ylim, figsize, seed, trace, upper_bound):
     """Simple demo showing the results of the various shrinkage methods"""
+
+    T = y * N
+    cov_fun, cov_kwargs = cov_fun_kwargs
+    Sigma, tau = cov_functions[cov_fun](N, seed=seed, **cov_kwargs)
+
     np.random.seed(seed)
-
-    T = y * n
-    Sigma, tau = cov_functions[cov_fun](n)
-
-    X = sample(Sigma, T)
-    S = cov(X)
-    lam, U = eig(S)
-    lam_1, lam_N = lam[0], lam[-1]
+    sim = Simulation(Sigma, T)
 
     fig, (ax0, ax1) = plt.subplots(figsize=figsize, ncols=2)
-    ax0.plot(annualize_vol(tau / n), label='true')
-    ax1.plot(annualize_vol(tau / n), label='true')
-    ax0.plot(annualize_vol(lam / n), label='sample')
-    ax1.plot(annualize_vol(lam / n), label='sample')
+    # ax0.plot(annualize_vol(tau / N), label='true')
+    # ax1.plot(annualize_vol(tau / N), label='true')
+    # ax0.plot(annualize_vol(lam / N), label='sample')
+    # ax1.plot(annualize_vol(lam / N), label='sample')
 
     # Oracle LW NLS shrinkage
-    _, d_lw_oracle = nls_oracle(X, S, U, Sigma)
-    d_isolw_oracle = isotonic_regression(d_lw_oracle)
-    ax0.plot(annualize_vol(d_lw_oracle / n), label='lw oracle')
-    ax1.plot(annualize_vol(d_isolw_oracle / n), label='lw oracle')
+    # d_lw_oracle = nls_oracle(sim)
+    # d_isolw_oracle = nls_oracle(sim, isotonic=True)
+    # ax0.plot(annualize_vol(d_lw_oracle / N), label='lw oracle')
+    # ax1.plot(annualize_vol(d_isolw_oracle / N), label='lw iso oracle')
 
-    # LW NLS shrinkage
-    _, d_lw = nls_asymptotic(X, S, U)
-    ax1.plot(annualize_vol(d_lw / n), label='lw')
+    # # LW NLS shrinkage
+    # S_lw = nlshrink_covariance(X, centered=True)
+    # d_lw = eig(S_lw, return_eigenvectors=False)
+    # ax1.plot(annualize_vol(d_lw / N), label='lw')
 
-    if loo:
-        # LOO LW NLS shrinkage
-        _, d_loo = nls_loo(X, S, U)
-        d_isoloo = isotonic_regression(d_loo)
-        ax0.plot(annualize_vol(d_loo / n), label='noisy-loo')
-        ax1.plot(annualize_vol(d_isoloo / n), label='isoloo')
+    # if loo:
+    #     # LOO LW NLS shrinkage
+    #     _, d_loo = nls_loo_cv(X, S, U)
+    #     d_isoloo = isotonic_regression(d_loo)
+    #     ax0.plot(annualize_vol(d_loo / N), label='noisy-loo')
+    #     ax1.plot(annualize_vol(d_isoloo / N), label='isoloo')
 
     # K-fold LW NLS shrinkage
-    _, d_kfold = nls_kfold(X, S, U, k)
-    d_isokfold = isotonic_regression(d_kfold)
-    ax0.plot(annualize_vol(d_kfold / n), label='noisy-kfold')
-    ax1.plot(annualize_vol(d_isokfold / n), label='isokfold')
+    # d_lw_loo = nls_loo(sim)
+    # d_lw_isoloo = nls_loo(sim, isotonic=True)
+    # ax0.plot(annualize_vol(d_lw_loo / N), label='lw_kfold')
+    # ax1.plot(annualize_vol(d_lw_isoloo / N), label='lw_isoloo')
+
+    d_lw_kfold = nls_kfold(sim, K)
+    d_lw_isokfold = nls_kfold(sim, K, isotonic=True)
+    ax0.plot(annualize_vol(d_lw_kfold / N), label='lw_kfold')
+    ax1.plot(annualize_vol(d_lw_isokfold / N), label='lw_isokfold')
 
     # MinVar NLS shrinkage
-    _, d_mv_oracle = minvar_nls_oracle(X, S, lam, U, Sigma)
-    d_isomv_oracle = isotonic_regression(d_mv_oracle, y_min=lam_N, y_max=lam_1)
-    _, d_isonlsq_mv_oracle = minvar_nls_oracle(
-        X, S, lam, U, Sigma, isotonic=True)
-    ax0.plot(annualize_vol(d_mv_oracle / n), label='noisy-mv_oracle')
-    ax1.plot(annualize_vol(d_isomv_oracle / n), label='buggy-iso-mv_oracle')
-    ax1.plot(annualize_vol(d_isonlsq_mv_oracle / n), label='isolsq-mv_oracle')
+    d_mv_oracle = minvar_oracle(
+        sim, monotonicity=None, trace=trace, upper_bound=upper_bound)
+    d_mv_mono_oracle = minvar_oracle(
+        sim, monotonicity='constraint', trace=trace, upper_bound=upper_bound)
+    d_mv_iso_oracle = minvar_oracle(
+        sim, monotonicity='isotonic', trace=trace, upper_bound=upper_bound)
+
+    ax0.plot(annualize_vol(d_mv_oracle / N), label='mv_oracle')
+    ax1.plot(annualize_vol(d_mv_mono_oracle / N), label='mv_mono_oracle')
+    ax1.plot(annualize_vol(d_mv_iso_oracle / N), label='mv_iso_oracle')
+
+    d_mv_loo = minvar_loo(
+        sim, monotonicity=None, trace=trace, upper_bound=upper_bound)
+    d_mv_mono_loo = minvar_loo(
+        sim, monotonicity='constraint', trace=trace, upper_bound=upper_bound)
+    d_mv_iso_loo = minvar_loo(
+        sim, monotonicity='isotonic', trace=trace, upper_bound=upper_bound)
+
+    ax0.plot(annualize_vol(d_mv_loo / N), label='mv_loo')
+    ax1.plot(annualize_vol(d_mv_mono_loo / N), label='mv_mono_loo')
+    ax1.plot(annualize_vol(d_mv_iso_loo / N), label='mv_iso_loo')
 
     ax0.legend()
     ax1.legend()
-    ax0.set_ylim(*ylim)
-    ax1.set_ylim(*ylim)
+    # ax0.set_ylim(*ylim)
+    # ax1.set_ylim(*ylim)
     plt.show()
 
 
 @cli.command()
 @click.option('--m', type=int, default=100)
-@click.option('--N', 'N', type=int, default=100)
+@click.option('--n', type=int, default=100)
 @click.option('--y', type=int, default=2)
 @click.option('--cov_fun', default='slr')
 @click.option('--lw/--no-lw', default=False)
@@ -97,7 +151,7 @@ def demo(n, y, cov_fun, loo, k, ylim, figsize, seed):
 @click.option('--ylim', nargs=2, type=float, default=None)
 @click.option('--figsize', nargs=2, type=float, default=(16, 12))
 @click.option('--seed', type=int, default=3910)
-def eigs(m, N, y, cov_fun, lw, loo, k, ylim, figsize, seed):
+def eigs(m, n, y, cov_fun, lw, loo, k, ylim, figsize, seed):
     """
     Generate box plots of the eigenvalues from the various shrinkage methods.
 
@@ -107,7 +161,7 @@ def eigs(m, N, y, cov_fun, lw, loo, k, ylim, figsize, seed):
     """
     # Setup covariance
     np.random.seed(seed)
-    T = y * N
+    T = y * n
 
     names = ['true', 'sample', 'lw_oracle', 'isolw_oracle', 'kfold', 'isokfold',
              'mv_oracle', 'isonlsq_mv_oracle', 'isonlsq_mv_kfold']
@@ -116,7 +170,7 @@ def eigs(m, N, y, cov_fun, lw, loo, k, ylim, figsize, seed):
     if loo:
         names += ['loo', 'isoloo']
     dfs = {
-        name: pd.DataFrame(np.zeros((m, N)))
+        name: pd.DataFrame(np.zeros((m, n)))
         for name in names
     }
 
@@ -125,10 +179,10 @@ def eigs(m, N, y, cov_fun, lw, loo, k, ylim, figsize, seed):
         # Build Model
         if cov_fun in ['slr', 'factor']:
             fm_seed = np.random.randint(1, 2**32 - 1)
-            Sigma, tmp = cov_functions[cov_fun](N, seed=fm_seed)
+            Sigma, tmp = cov_functions[cov_fun](n, seed=fm_seed)
         else:
-            Sigma, tmp = cov_functions[cov_fun](N)
-        dfs['true'].iloc[j, :] = tau = annualize_vol(tmp / N)
+            Sigma, tmp = cov_functions[cov_fun](n)
+        dfs['true'].iloc[j, :] = tau = annualize_vol(tmp / n)
 
         if ylim is None:
             ylim = (0., 2 * np.max(tau))
@@ -136,51 +190,51 @@ def eigs(m, N, y, cov_fun, lw, loo, k, ylim, figsize, seed):
         # Generate data
         X = sample(Sigma, T)
         S = cov(X)
-        lam, U = eig(S, return_eigenvectors=True)
+        lam, U = eig(S)
 
-        # Note: eigenvalues need to be scaled by 1 / N to convert to variance
+        # Note: eigenvalues need to be scaled by 1 / n to convert to variance
         # Sample covariance
-        dfs['sample'].iloc[j, :] = annualize_vol(lam / N)
+        dfs['sample'].iloc[j, :] = annualize_vol(lam / n)
 
         # Oracle LW NLS shrinkage
         _, tmp = nls_oracle(X, S, U, Sigma)
-        dfs['lw_oracle'].iloc[j, :] = annualize_vol(tmp / N)
+        dfs['lw_oracle'].iloc[j, :] = annualize_vol(tmp / n)
         tmp = isotonic_regression(tmp)
-        dfs['isolw_oracle'].iloc[j, :] = annualize_vol(tmp / N)
+        dfs['isolw_oracle'].iloc[j, :] = annualize_vol(tmp / n)
 
         # LW NLS shrinkage
         if lw:
             S_lw = nlshrink_covariance(X, centered=True)
             tmp = eig(S_lw, return_eigenvectors=False)
-            dfs['lw'].loc[j, :] = annualize_vol(tmp / N)
+            dfs['lw'].loc[j, :] = annualize_vol(tmp / n)
 
         # LOO LW NLS shrinkage
         if loo:
-            _, tmp = nls_loo(X, S, U)
-            dfs['loo'].iloc[j, :] = annualize_vol(tmp / N)
+            _, tmp = nls_loo_cv(X, S, U)
+            dfs['loo'].iloc[j, :] = annualize_vol(tmp / n)
             tmp = isotonic_regression(tmp)
-            dfs['isoloo'].iloc[j, :] = annualize_vol(tmp / N)
+            dfs['isoloo'].iloc[j, :] = annualize_vol(tmp / n)
 
         # K-fold LW NLS shrinkage
-        _, tmp = nls_kfold(X, S, U, k)
-        dfs['kfold'].iloc[j, :] = annualize_vol(tmp / N)
+        _, tmp = nls_kfold_cv(X, S, U, k)
+        dfs['kfold'].iloc[j, :] = annualize_vol(tmp / n)
         tmp = isotonic_regression(tmp)
-        dfs['isokfold'].iloc[j, :] = annualize_vol(tmp / N)
+        dfs['isokfold'].iloc[j, :] = annualize_vol(tmp / n)
 
         # MinVar NLS shrinkage
         _, tmp = minvar_nls_oracle(X, S, lam, U, Sigma)
-        dfs['mv_oracle'].iloc[j, :] = annualize_vol(tmp / N)
+        dfs['mv_oracle'].iloc[j, :] = annualize_vol(tmp / n)
         # Note: Applying isotonic regression after solving for the oracle values
         # is consistently way worse than solving the constrained LS problem so
         # it is omitted.
         # lam_1, lam_n = lam[0], lam[-1]
         # tmp = isotonic_regression(tmp, y_min=lam_n, y_max=lam_1)
-        # dfs['isomv_oracle'].iloc[j, :] = annualize_vol(tmp / N)
+        # dfs['isomv_oracle'].iloc[j, :] = annualize_vol(tmp / n)
         _, tmp = minvar_nls_oracle(X, S, lam, U, Sigma, isotonic=True)
-        dfs['isonlsq_mv_oracle'].iloc[j, :] = annualize_vol(tmp / N)
+        dfs['isonlsq_mv_oracle'].iloc[j, :] = annualize_vol(tmp / n)
 
         _, tmp = minvar_nls_kfold(X, S, lam, U, k)
-        dfs['isonlsq_mv_kfold'].iloc[j, :] = annualize_vol(tmp / N)
+        dfs['isonlsq_mv_kfold'].iloc[j, :] = annualize_vol(tmp / n)
 
         pbar.update()
 
@@ -217,6 +271,18 @@ def eigs(m, N, y, cov_fun, lw, loo, k, ylim, figsize, seed):
     ax2.set_ylim(*ylim)
 
     plt.show()
+
+
+def portfolio_analysis(S, Sigma, gamma, pi_true):
+    pi = min_var_portfolio(S, gamma=gamma)
+    out = {
+        'oos_var': portfolio_var(pi, Sigma),
+        'is_var': portfolio_var(pi, S),
+        'forecast_var_ratio': variance_ratio(pi, S, Sigma),
+        'true_var_ratio': true_variance_ratio(pi, pi_true, Sigma),
+        'te': tracking_error(pi, pi_true, Sigma)
+    }
+    return out
 
 
 @cli.command()
@@ -262,6 +328,12 @@ def var_ratio(M, N, y, cov_fun, gamma, lw, loo, K, ylim, figsize, seed):
         'true_var_ratio': empty_df.copy(),
         'te': empty_df.copy(),
     }
+    # forecast_var_ratio_df = pd.DataFrame(
+    #     np.zeros((M, len(names))), columns=names)
+    # oos_var_df = pd.DataFrame(np.zeros((M, len(names))), columns=names)
+    # is_var_df = pd.DataFrame(np.zeros((M, len(names))), columns=names)
+    # true_var_ratio_df = pd.DataFrame(np.zeros((M, len(names))), columns=names)
+    # te_df = pd.DataFrame(np.zeros((M, len(names))), columns=names)
 
     pbar = tqdm(total=M)
 
@@ -317,7 +389,7 @@ def var_ratio(M, N, y, cov_fun, gamma, lw, loo, K, ylim, figsize, seed):
         # LOO LW NLS shrinkage
         if loo:
             name = 'lw_loo'
-            _, d_lw_loo = nls_loo(X, S, U)
+            _, d_lw_loo = nls_loo_cv(X, S, U)
             S_lw_loo = eig_multiply(U, d_lw_loo)
             result = portfolio_analysis(S_lw_loo, Sigma, gamma, pi_true)
             results.append({name: result})
@@ -334,7 +406,7 @@ def var_ratio(M, N, y, cov_fun, gamma, lw, loo, K, ylim, figsize, seed):
 
         # K-fold LW NLS shrinkage
         name = 'lw_kfold'
-        _, d_lw_kfold = nls_kfold(X, S, U, K)
+        _, d_lw_kfold = nls_kfold_cv(X, S, U, K)
         S_lw_kfold = eig_multiply(U, d_lw_kfold)
         result = portfolio_analysis(S_lw_kfold, Sigma, gamma, pi_true)
         results.append({name: result})

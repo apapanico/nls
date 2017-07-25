@@ -40,7 +40,7 @@ def nls_oracle_cv(X,S):
         _,U_k = eig(S_k)
         
         Xk      = X[k].reshape(N,1)
-        C_k     = U_k.T @ Xk @ Xk.T @ U_k 
+        C_k     = U_k.T @ Xk @ Xk.T @ U_k
         alpha_k = U_k.T @ np.ones(N)
         A_k     = np.diag(alpha_k)
         
@@ -94,3 +94,4 @@ mleg = mlines.Line2D([], [],
 
 plt.legend(handles=[vleg,mleg],
                    numpoints=1, fancybox=True, framealpha=0.25)
+plt.show()

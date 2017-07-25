@@ -5,11 +5,14 @@ Utility Functions for Testing Nonlinear Shrinkage
 import numpy as np
 from numpy.linalg import eigh, eigvalsh
 
+from portfolios import min_var_portfolio
+
 
 def sample(Sigma, T):
     """Sample from multivariate normal distribtion"""
     N = Sigma.shape[0]
     X = np.random.multivariate_normal(np.zeros(N), Sigma, T)
+    X = X - X.mean()
     return X
 
 
@@ -68,5 +71,17 @@ def true_variance_ratio(w, w0, C0):
 
 
 def tracking_error(w, w0, C0):
-    """Portfolio Variance Ratio"""
+    """Tracking error"""
     return portfolio_vol(w - w0, C0)
+
+
+def portfolio_analysis(S, Sigma, gamma, pi_true):
+    pi = min_var_portfolio(S, gamma=gamma)
+    out = {
+        'oos_var': portfolio_var(pi, Sigma),
+        'is_var': portfolio_var(pi, S),
+        'forecast_var_ratio': variance_ratio(pi, S, Sigma),
+        'true_var_ratio': true_variance_ratio(pi, pi_true, Sigma),
+        'te': tracking_error(pi, pi_true, Sigma)
+    }
+    return out
