@@ -2,10 +2,51 @@
 Utility Functions for Testing Nonlinear Shrinkage
 """
 
+import joblib
 import numpy as np
 from numpy.linalg import eigh, eigvalsh
+from sklearn.isotonic import isotonic_regression as sk_isotonic_regression
 
 from portfolios import min_var_portfolio
+
+
+class Simulation(object):
+
+    def __init__(self, Sigma, T):
+        self.Sigma = Sigma
+        self.tau, self.V = eig(Sigma)
+        self.N = Sigma.shape[0]
+        self.T = T
+        self.sample()
+
+    def sample(self):
+        self.X = X = sample(self.Sigma, self.T)
+        self.cov_est()
+        self._hash = hash(joblib.hash(X))
+
+    def __hash__(self):
+        return self._hash
+
+    def cov_est(self):
+        self.S = S = cov(self.X)
+        self.lam, self.U = eig(S)
+
+    @property
+    def shape(self):
+        return self.X.shape
+
+    @property
+    def lam_1(self):
+        return self.lam[0]
+
+    @property
+    def lam_N(self):
+        return self.lam[-1]
+
+    @property
+    def vols(self, pop=False):
+        eigvals = self.tau if pop else self.lam
+        return annualize_vol(eigvals / self.N)
 
 
 def sample(Sigma, T):
@@ -34,6 +75,11 @@ def eig(A, return_eigenvectors=True):
     else:
         vals = eigvalsh(A)
         return vals[::-1]
+
+
+def isotonic_regression(y, y_min=None, y_max=None):
+    """Wrapper around SKlearn's isotonic regression"""
+    return sk_isotonic_regression(y, y_min=y_min, y_max=y_max, increasing=False)
 
 
 def annualize_var(lam):

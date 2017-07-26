@@ -13,7 +13,7 @@ from utils import eig
 ########################
 
 
-def SLR_cov(N, K0=4, K1=32, K2=16, seed=23945):
+def SLR_cov(N, K0=4, K1=32, K2=16, seed=None):
     """SLR Covariance Matrix"""
     signature = dict(N=N, K0=K0, K1=K1, K2=K2, seed=seed)
     fm = fm_(**signature)
@@ -22,7 +22,7 @@ def SLR_cov(N, K0=4, K1=32, K2=16, seed=23945):
     return Sigma, tau
 
 
-def factor_cov(N, K0=4, seed=23945):
+def factor_cov(N, K0=4, seed=None):
     """Conventional Factor model covariance"""
     signature = dict(N=N, K0=K0, K1=0, K2=0, seed=seed)
     fm = fm_(**signature)

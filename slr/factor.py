@@ -59,7 +59,7 @@ class factor_model:
 
     def __init__ (self, **kwargs):
     
-        dict_of_defaults = dict (N=32, K0=0, K1=0, seed = 1)
+        dict_of_defaults = dict (N=32, K0=0, K1=0, seed = None)
         keys = kwargs.keys()
     
         # notify user of defaults used
@@ -89,7 +89,8 @@ class factor_model:
 
         # set the random numbers seed for self
         self.signature = [self.seed, self.N] + self.KS 
-        np.random.seed (self.signature)
+        if self.seed is not None:
+            np.random.seed (self.signature)
 
         # generate volatilities unless provided
         for i in range (len (self.KS)):
@@ -113,7 +114,8 @@ class factor_model:
         self.Y = self.generate_global_exposures()
         self.X = self.generate_sparse_exposures()
         
-        self.seed_return_generating_process()
+        if self.seed is not None:
+            self.seed_return_generating_process()
     #@ __init__
 
 
@@ -192,7 +194,7 @@ class factor_model:
     #                                                  #
     # *use SLD for shorthand                           #
     ####################################################
-    def covariances (self, T = np.inf, seed = 1):
+    def covariances (self, T = np.inf, seed = None):
     
         # population covariances
         if np.isinf (T):
@@ -238,7 +240,7 @@ class factor_model:
     #@ def
 
 
-    def covariance (self, T = np.inf, seed = 1):
+    def covariance (self, T = np.inf, seed = None):
         S, L, D = self.covariances (T, seed)
         return S + L + D
     #@ def

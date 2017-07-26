@@ -1,67 +1,14 @@
-"""
-Shrinkage Functions for Testing Nonlinear Shrinkage
-"""
+################################################################################
+# THIS NEEDS TO BE REWORKED TO GO THROUGH THE PROPOSED LIST OF ESTIMATORS
+################################################################################
 
 from tqdm import tqdm
 import numpy as np
-from sklearn.isotonic import isotonic_regression as sk_isotonic_regression
 # import cvxopt as opt
 # import cvxopt.solvers as optsolvers
 
-from cov import nlshrink_covariance
-from utils import eig
-
-
-def nls_oracle(X, S, U, Sigma):
-    """Oracle eigenvalues for LW nonlinear shrinkage"""
-    T, N = X.shape
-
-    d = np.zeros(N)
-    for i in range(N):
-        u_i = U[:, i]
-        d[i] = u_i.T.dot(Sigma).dot(u_i)
-    return U, d
-
-
-def nls_asymptotic(X, S, U):
-    S_lw = nlshrink_covariance(X, centered=True)
-    d_lw = eig(S_lw, return_eigenvectors=False)
-    return U, d_lw
-
-
-def nls_loo(X, S, U, progress=False):
-    """Leave-One-Out cross-validated eigenvalues for LW nonlinear shrinkage"""
-    T, N = X.shape
-    d = np.zeros(N)
-    if progress:
-        pbar = tqdm(total=T)
-    for k in range(T):
-        x_k = X[k, :]
-        S_k = (T * S - np.outer(x_k, x_k)) / (T - 1)
-        _, U_k = eig(S_k)
-        d += U_k.T.dot(x_k)**2 / T
-        if progress:
-            pbar.update()
-    return U, d
-
-
-def nls_kfold(X, S, U, K=10, progress=False):
-    """K-fold cross-validated eigenvalues for LW nonlinear shrinkage"""
-    T, N = X.shape
-    m = int(T / K)
-    d = np.zeros(N)
-    if progress:
-        pbar = tqdm(total=K)
-    for k in range(K):
-        k_set = list(range(k * m, (k + 1) * m))
-        X_k = X[k_set, :]
-        S_k = (T * S - X_k.T.dot(X_k)) / (T - m)
-        _, U_k = eig(S_k)
-        tmp = (U_k.T.dot(X_k.T)**2).sum(axis=1)
-        d += tmp / T
-        if progress:
-            pbar.update()
-    return U, d
+from utils import eig, isotonic_regression
+from nls import nls_kfold
 
 
 def minvar_nls_oracle(X, S, lam, U, Sigma, isotonic=False, trace=False,
@@ -172,11 +119,6 @@ def minvar_nls_kfold(X, S, lam, U, K, progress=False, trace=False,
             C_list, alpha_list, trace, d_isokfold, d_min, d_max, upper_bound)
 
     return U, d
-
-
-def isotonic_regression(y, y_min=None, y_max=None):
-    """Wrapper around SKlearn's isotonic regression"""
-    return sk_isotonic_regression(y, y_min=y_min, y_max=y_max, increasing=False)
 
 
 def f(d, alpha, C):
