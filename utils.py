@@ -131,3 +131,38 @@ def portfolio_analysis(S, Sigma, gamma, pi_true):
         'te': tracking_error(pi, pi_true, Sigma)
     }
     return out
+
+
+### >>>>>>>>>>>> ####
+
+def generate_simple_returns(vols,T,seed=None):
+   
+    # vols - list of variances for each security
+    # T    - number of samples
+    # seed - seed of random number generator
+    
+    rng  = np.random.RandomState (seed)
+    N    = len(vols)
+    vcov = np.diag(vols)
+    
+    R = rng.multivariate_normal (np.zeros(N), vcov, T) 
+    
+    return R
+#@def
+
+def generate_uniform_volatilities(N,seed=None):
+    
+    # N - number of securities
+    tdays = 256 
+    rng  = np.random.RandomState(seed)
+    vols = rng.uniform(((5/100)**2)/tdays,((30/100)**2)/tdays,N).tolist()   # assume 5-30% fluctuation a year. Those are daily volatilities
+    
+    return vols
+ #@def
+ 
+def sd_annual(x):
+     tdays = 256 
+     return np.sqrt(x*tdays)*100
+#@def
+ 
+ ### <<<<<<<<<<<<<< ####
