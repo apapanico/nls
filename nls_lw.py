@@ -11,7 +11,6 @@ from utils import eig, isotonic_regression
 
 def nls_oracle(sim, isotonic=False, **kwargs):
     """Oracle eigenvalues for LW nonlinear shrinkage"""
-
     T, N = sim.shape
     U = sim.U
     Sig = sim.Sigma

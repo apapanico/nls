@@ -1,0 +1,50 @@
++ New Project Structure:
+    
+    - Main Directory:
+        + analysis.py
+            * This will be the main CLI tool for running analyses and generating results
+            * It will use click and feature multiple commands for different analyses (as it basically does now)
+            * Commands should be split off into individual python files to reduce bulk
+        + models.py
+            * Covariance models (for now that seems to be the only kind of model)
+            * Interface
+                - Input: N, **kwargs
+                    + N is the size of the problem
+                    + kwargs is a set of specific model keyword arguments
+                - Output: cov, eig
+                    + Covariance matrix and eigenvalues
+        + nls_lw.py
+            * LW NLS methods
+                1. Oracle: computes $u_i^T \Sigma u_i$
+                2. Asymptotic: from RMT theory in LW17
+                3. LOO/K-Fold: CV based methods of Bartz 16
+            * Interface
+                - Input: sim, **kwargs
+                    + sim is a Simulation object
+                    + kwargs is a set of specific method keyword arguments
+                - Output: d
+                    + shrunk eigenvalues
+        + nls_minvar.py
+            * MinVar Shrinkage: implements proposed estimators in the notes
+            * Interface is the same as in nls_lw.py
+        + portfolios.py
+            * Portfolio computations
+        + utils.py
+            * Various utility functions
+    - To merge:
+        + simulations.py
+            * Move sim model to models
+            * Move plotting to plotting.py
+            * Analysis should be under blanket of analysis.py
+        + experimental/classes.py
+            * Move Simulation class into utils.py
+    - New
+        + plotting.py
+            * All plotting functions should be moved here
+        + io.py
+            * IO functionality should be here
+                - Results (Sigma, X, d) need to be saved in compressed csv for later reading for more efficient analysis
+        + classes
+            * Later on, might become helpful to introduce new objects: Model, Covariance, Data, Portfolio, etc
+
+
