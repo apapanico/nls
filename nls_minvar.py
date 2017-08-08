@@ -7,20 +7,26 @@ import numpy as np
 # import cvxopt as opt
 # import cvxopt.solvers as optsolvers
 
-from utils import eig, isotonic_regression
-from nls import nls_kfold
+from utils import eig, isotonic_regression,cov,interpolate_zeros
+from nls_lw import nls_kfold
+import scipy as scipy
 
 
-def minvar_nls_oracle(X, S, lam, U, Sigma, isotonic=False, trace=False,
-                      upper_bound=True):
+
+def minvar_nls_oracle(sim,isotonic=False, trace=False,
+                      upper_bound=True):   
     """Oracle eigenvalues for new MinVar nonlinear shrinkage"""
-    T, N = X.shape
+    T, N = sim.shape
+    U,Sigma = sim.U,sim.Sigma
+    lam = sim.lam
+    
     alpha = U.T.dot(np.ones(N))
     C = U.T.dot(Sigma).dot(U)
+
     if isotonic:
         # Solve non-linear problem with monotonicity constraints
         d_min, d_max = lam[-1], lam[0]
-        _, d_kfold = nls_kfold(X, S, U)
+        _, d_kfold = nls_kfold(sim)
         d_isokfold = isotonic_regression(d_kfold)
         if trace:
             trace = np.sum(d_isokfold)
@@ -36,15 +42,19 @@ def minvar_nls_oracle(X, S, lam, U, Sigma, isotonic=False, trace=False,
         A = C * alpha
         z = np.linalg.solve(A, alpha)
         d = 1. / z
-    return U, d
+    return d
 
 
-def minvar_nls_kfold_oracle(X, S, lam, U, Sigma, K, progress=False,
+
+def minvar_nls_kfold_oracle(sim, K=10, progress=False,
                             trace=False, upper_bound=True):
     """
     Oracle/K-fold cross-validated eigenvalues for new MinVar nonlinea shrinkage.
     """
-    T, N = X.shape
+    T, N = sim.shape
+    S,Sigma = sim.S,sim.Sigma
+    X = sim.X
+    lam = sim.lam
     m = int(T / K)
 
     C_list = []
@@ -67,7 +77,7 @@ def minvar_nls_kfold_oracle(X, S, lam, U, Sigma, K, progress=False,
             pbar.update()
 
     d_min, d_max = lam[-1], lam[0]
-    _, d_kfold = nls_kfold(X, S, U, K)
+    d_kfold = nls_kfold(sim,K)
     d_isokfold = isotonic_regression(d_kfold)
     if trace:
         trace = np.sum(d_isokfold)
@@ -78,14 +88,81 @@ def minvar_nls_kfold_oracle(X, S, lam, U, Sigma, K, progress=False,
         d = minvar_nls_nlsq_multi(
             C_list, alpha_list, trace, d_isokfold, d_min, d_max, upper_bound)
 
-    return U, d
+    return d
 
 
-def minvar_nls_kfold(X, S, lam, U, K, progress=False, trace=False,
+def minvar_nls_loo(sim):
+    
+    T,N = sim.shape
+    
+    X= sim.X
+        
+    P=np.zeros((N,N))
+    q=np.zeros(N)
+    
+    for k in range(T):
+        
+        _k  = list(range(T))
+        del _k[k]
+        
+        S_k   = cov(X[_k,:])
+        _,U_k = eig(S_k)
+        
+        Xk      = X[k].reshape(N,1)
+        C_k     = U_k.T @ Xk @ Xk.T @ U_k 
+        alpha_k = U_k.T @ np.ones(N)
+        A_k     = np.diag(alpha_k)
+        
+        P += A_k @ C_k.T @ C_k @ A_k
+        q += - A_k @ C_k.T @ alpha_k
+        
+    #@for
+    
+    z = np.linalg.solve(P,-q)
+    d = 1/z
+    
+    return d
+#@def
+
+
+
+def minvar_nls_oracle_reg(sim,lmbda):
+    """Oracle eigenvalues for new MinVar nonlinear shrinkage with regularization and non-negative lsq"""
+    # here Sigma is generated with one of the covariance functions from models.py
+    
+    T, N = sim.shape
+    Sigma,U = sim.Sigma,sim.U
+    alpha = U.T.dot(np.ones(N))
+    C = U.T.dot(Sigma).dot(U)
+    z = nnlsq_regularized(C @ np.diag(alpha), alpha, lmbda)
+    #z = lsq_regularized(C @ np.diag(alpha),alpha,lmbda)
+    interpolate_zeros(z)
+    d = 1/z
+    return d
+
+def lsq_regularized(A,b,lmbda):
+    N = len(b)
+    G = np.identity(N) * lmbda
+    x = np.linalg.inv(A.T @ A + G.T @ G)  @ A.T @ b
+    return x
+
+def nnlsq_regularized(A,b,lmbda):
+    ''' Non-negative least squares with regularization'''
+    N = len(b)
+    G = np.identity(N) * lmbda
+    W = np.concatenate((A,G),axis=0)
+    f = np.concatenate((b,np.zeros(N)),axis=0)
+    
+    x = scipy.optimize.nnls(W,f)[0]
+    
+    return x
+
+def minvar_nls_kfold(sim,K, progress=False, trace=False,
                      upper_bound=True):
     """K-fold cross-validated eigenvalues for new MinVar nonlinear shrinkage"""
-    T, N = X.shape
+    T, N = sim.shape
     m = int(T / K)
+    X,S,lam = sim.X,sim.S,sim.lam
 
     C_list = []
     alpha_list = []
@@ -107,7 +184,7 @@ def minvar_nls_kfold(X, S, lam, U, K, progress=False, trace=False,
             pbar.update()
 
     d_min, d_max = lam[-1], lam[0]
-    _, d_kfold = nls_kfold(X, S, U, K)
+    d_kfold = nls_kfold(sim,K)
     d_isokfold = isotonic_regression(d_kfold)
     if trace:
         trace = np.sum(d_isokfold)
@@ -118,7 +195,7 @@ def minvar_nls_kfold(X, S, lam, U, K, progress=False, trace=False,
         d = minvar_nls_nlsq_multi(
             C_list, alpha_list, trace, d_isokfold, d_min, d_max, upper_bound)
 
-    return U, d
+    return d
 
 
 def f(d, alpha, C):
