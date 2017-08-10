@@ -2,57 +2,21 @@
 Utility Functions for Testing Nonlinear Shrinkage
 """
 
-import joblib
 import numpy as np
 from numpy.linalg import eigh, eigvalsh
 from sklearn.isotonic import isotonic_regression as sk_isotonic_regression
-
 from portfolios import min_var_portfolio
 
 
-class Simulation(object):
+def isotonic_regression(y, y_min=None, y_max=None):
+    """Wrapper around SKlearn's isotonic regression"""
+    return sk_isotonic_regression(y, y_min=y_min, y_max=y_max, increasing=False)
 
-    def __init__(self, Sigma, T):
-        self.Sigma = Sigma
-        self.tau, self.V = eig(Sigma)
-        self.N = Sigma.shape[0]
-        self.T = T
-        self.sample()
-
-    def sample(self):
-        self.X = X = sample(self.Sigma, self.T)
-        self.cov_est()
-        self._hash = hash(joblib.hash(X))
-
-    def __hash__(self):
-        return self._hash
-
-    def cov_est(self):
-        self.S = S = cov(self.X)
-        self.lam, self.U = eig(S)
-
-    @property
-    def shape(self):
-        return self.X.shape
-
-    @property
-    def lam_1(self):
-        return self.lam[0]
-
-    @property
-    def lam_N(self):
-        return self.lam[-1]
-
-    @property
-    def vols(self, pop=False):
-        eigvals = self.tau if pop else self.lam
-        return annualize_vol(eigvals / self.N)
-
-
-def sample(Sigma, T):
+def sample(Sigma, T,seed=None):
     """Sample from multivariate normal distribtion"""
+    rng = np.random.RandomState(seed)
     N = Sigma.shape[0]
-    X = np.random.multivariate_normal(np.zeros(N), Sigma, T)
+    X = rng.multivariate_normal(np.zeros(N), Sigma, T)
     X = X - X.mean()
     return X
 
@@ -75,11 +39,6 @@ def eig(A, return_eigenvectors=True):
     else:
         vals = eigvalsh(A)
         return vals[::-1]
-
-
-def isotonic_regression(y, y_min=None, y_max=None):
-    """Wrapper around SKlearn's isotonic regression"""
-    return sk_isotonic_regression(y, y_min=y_min, y_max=y_max, increasing=False)
 
 
 def annualize_var(lam):
@@ -134,35 +93,50 @@ def portfolio_analysis(S, Sigma, gamma, pi_true):
 
 
 ### >>>>>>>>>>>> ####
+ 
+def nan_helper(y):
+    """Helper to handle indices and logical indices of NaNs.
+       NaNs might be repalced with any other values desired. Just change 
+       the check function
 
-def generate_simple_returns(vols,T,seed=None):
-   
-    # vols - list of variances for each security
-    # T    - number of samples
-    # seed - seed of random number generator
+    Input:
+        - y, 1d numpy array with possible NaNs
+    Output:
+        - nans, logical indices of NaNs
+        - index, a function, with signature indices= index(logical_indices),
+          to convert logical indices of NaNs to 'equivalent' indices
+    Example:
+        >>> # linear interpolation of NaNs
+        >>> nans, x= nan_helper(y)
+        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+    """
+    return np.isnan(y), lambda z: z.nonzero()[0]
+
+def inf_helper(y):
+    return np.isinf(y), lambda z: z.nonzero()[0]
+
+def zeros_helper(y):
+    return y==0, lambda z: z.nonzero()[0]
+
+def interpolate_inf(y):
+    infs, x= inf_helper(y)
+    y[infs] = np.interp(x(infs), x(~infs), y[~infs])
+    return
+
+def interpolate_zeros(y):
+    zeros, x= zeros_helper(y)
+    y[zeros] = np.interp(x(zeros), x(~zeros), y[~zeros])
+    return
     
-    rng  = np.random.RandomState (seed)
-    N    = len(vols)
-    vcov = np.diag(vols)
+def abs_dif(x,y):
+    return sum(np.absolute(x-y))
     
-    R = rng.multivariate_normal (np.zeros(N), vcov, T) 
-    
-    return R
+def read_inquiry(inq):
+    # inq = inquiry of the form (estimator,T,N)
+    return inq[0]+'_T='+str(inq[1])+'_N='+str(inq[2])
 #@def
 
-def generate_uniform_volatilities(N,seed=None):
-    
-    # N - number of securities
-    tdays = 256 
-    rng  = np.random.RandomState(seed)
-    vols = rng.uniform(((5/100)**2)/tdays,((30/100)**2)/tdays,N).tolist()   # assume 5-30% fluctuation a year. Those are daily volatilities
-    
-    return vols
- #@def
- 
-def sd_annual(x):
-     tdays = 256 
-     return np.sqrt(x*tdays)*100
-#@def
- 
+
  ### <<<<<<<<<<<<<< ####
+ 
+
