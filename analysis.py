@@ -80,7 +80,7 @@ def simulate_eigs(simulations=5,N=10,T=100,seed=1,estimators=['sample'],cov_mode
             if est =='sample':
                 eigenvalues['sample' +'_'+'T='+str(T)+'_'+ 'N='+str(N)].append(SimObj.lam)
             else:
-                kwargs = dict()                                     # need to rewrite the code for every estimator. Now it takes a simulation class as an input
+                kwargs = dict()                                     
                 if 'kfold' in est:
                     kwargs['K'] = 10
                 if 'reg' in est:
