@@ -3,7 +3,296 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 from pylab import setp
+from utils import *
 
+
+ 
+def line_plot_eigs(simResult,T,N,estimators,qtile,simulations,save=False):
+    
+    true_eigs = annualize_vol(simResult[1]/N)
+    
+    # create a set of subplots and set its parameters
+    
+    fig_w = 15
+    fig_h = 6
+    
+    
+    fig,ar = plt.subplots(nrows=1, ncols=len(estimators),
+                          sharex=True,sharey=True,
+                          figsize=(fig_w, fig_h), dpi=100,squeeze=False)
+    
+    
+    fig.suptitle('N='+ str(N) + 
+                 ', T=' + str(T) + 
+                 ', simulations=' + str(simulations),
+                 fontsize=14, color='black')
+    
+    
+    fig.text(0.04, 0.5, 'Ann.Volatility(%)', 
+             va='center', rotation='vertical')
+    
+    # iterate over every estimator 
+        
+    for i in estimators:
+        inq = read_inquiry((i,T,N))
+        if inq not in simResult[0].keys():
+            raise Exception('No simulations run for '+inq+' estimator')
+        if simulations!=1:
+            raise Exception('Number of simulations for '+inq+' estimator has to be 1')
+        else:
+            est_eigs  = simResult[0][inq][0]
+            est_eigs  = annualize_vol(est_eigs/N)
+        #@if
+        
+        # choose eigenvalues on qtile quantiles
+        xcoord      = np.rint(np.linspace(0,N-1,qtile)).astype(int)
+        
+        # plotting part
+        # every estimator should fill a subplot
+        
+        p = estimators.index(i)
+        ax = ar[0,p]
+        
+        bamboo = "#DC5C05"
+        orange = "#FF9000"
+
+        
+        # draw a line with true eigenvalues
+        
+        ax.plot(list(range(1,qtile+1)),
+                 true_eigs[xcoord],
+                 color = 'C0',
+                 marker="o",
+                 markerfacecolor=bamboo, 
+                 markeredgecolor=bamboo,
+                 markersize=3,
+                 zorder=2)
+        
+        # draw a line with estimated eigenvalues 
+        
+        ax.plot(list(range(1,qtile+1)),
+                 est_eigs[xcoord],
+                 color='grey',
+                 marker="o",
+                 markerfacecolor=orange, 
+                 markeredgecolor=orange,
+                 markersize=3,
+                 zorder=2)
+        
+        # draw titles, axes and etc.
+        
+        
+        # draw titles, axes and etc.
+        
+        ax.set_title(i ,y=1.01,
+                  fontsize=10, color='black')
+        
+        ax.set_xticks(list(range(1,qtile+1)))
+        ax.set_xticklabels(['${\\hat{\lambda}_{'+ str(i) + '}}$' for i in xcoord+1],
+                            fontsize='small')
+                
+        # show the difference between true eigenvalues and centers of boxplots
+     
+        ax.fill_between(list(range(1,qtile+1)), 
+                         est_eigs[xcoord], 
+                         true_eigs[xcoord], 
+                         color='grey', 
+                         alpha='0.5')
+        # draw legend
+        
+        vleg = mlines.Line2D([], [],
+                     markeredgecolor=bamboo,
+                     markerfacecolor=bamboo,
+                     marker='o',
+                     linestyle='-',
+                     markersize=4,
+                     label='$\\lambda(\Sigma)$')
+       
+        mleg = mlines.Line2D([], [],
+                             color='grey',
+                             alpha=0.5,
+                             markeredgecolor='None',
+                             marker='s',
+                             linestyle='None',
+                             markersize=10,
+                             label='Bias')
+
+        ax.legend(handles=[vleg,mleg],
+                   numpoints=1, fancybox=True, framealpha=0.25)
+        
+        # draw bias 
+        
+        bias = abs_dif(true_eigs,est_eigs)
+        bias = round(bias,1)
+        ax.text(1, 5, 'Bias= ' + str(bias),
+                bbox=dict(facecolor='grey', alpha=0.5))
+
+    #save the result
+    if save:
+        plt.savefig('N='+ str(N) + 
+                    ' T=' + str(T) + 
+                    ' simulations=' + str(simulations)+
+                    '.jpg',dpi=200)
+    
+    plt.show()  
+    
+    #@for
+    
+#@def
+
+
+
+def box_plot_eigs(simResult,T,N,estimators,qtile,simulations,save=False):
+    
+    # function plots an inquiry of the form (estimator,T,N) with all nonzero elements
+    # it compares the distribution of each eigenvalue with the true eigenvalue
+    
+    # simresult  = output from simulate_eigs
+    # estimators = estimator used to find the covariance matrix 
+    # T,N        = number of samples and number of stocks
+    # qtile      = quantile of eigenvalues which to display (for visualization purposes)
+    
+    # convert daily variances into annualized std in % 
+    
+    true_eigs = annualize_vol(simResult[1]/N)
+    
+    # create a set of subplots and set its parameters
+    
+    
+    fig_w = 15
+    fig_h = 6
+    
+    
+    fig,ar = plt.subplots(nrows=1, ncols=len(estimators),
+                          sharex=True,sharey=True,
+                          figsize=(fig_w, fig_h), dpi=100,squeeze=False)
+    
+    
+    fig.suptitle('N='+ str(N) + 
+                 ', T=' + str(T) + 
+                 ', simulations=' + str(simulations),
+                 fontsize=14, color='black')
+    
+    
+    fig.text(0.04, 0.5, 'Ann.Volatility(%)', 
+             va='center', rotation='vertical')
+    
+    # iterate over every estimator 
+    
+    for i in estimators:
+        inq = read_inquiry((i,T,N))
+        if inq not in simResult[0].keys():
+            raise Exception('No simulations run for '+inq+' estimator')
+        else:
+            est_eigs  = np.vstack(simResult[0][inq])
+            est_eigs  = annualize_vol(est_eigs/N)
+        #@if
+        
+        # choose eigenvalues on qtile quantiles
+        xcoord      = np.rint(np.linspace(0,N-1,qtile)).astype(int)
+        box_medians = np.median(est_eigs,0)
+                
+        # plotting part
+        # every estimator should fill a subplot
+        
+        p = estimators.index(i)
+        ax = ar[0,p]
+        
+        violet = "#462066"
+        bamboo = "#DC5C05"
+        orange = "#FF9000"
+        
+        lw = 1.5
+    
+        #plt.subplot(1,3,estimators.index(i)+1) 
+    
+        bp = ax.boxplot(est_eigs[:,xcoord],
+                    notch=True, 
+                    widths=np.repeat(0.2,len(xcoord)).tolist(),
+                    patch_artist=True,
+                    showfliers=False,
+                    zorder=1)
+        
+        # change boxplots
+        
+        for j in range(qtile):
+            setp(bp['boxes'][j], edgecolor=violet, fill=False, linewidth=lw)
+            setp(bp['medians'][j], color=orange, linewidth=lw)
+            setp(bp['whiskers'][j], color=violet, linewidth=lw,linestyle='--')
+            setp(bp['whiskers'][j+qtile], color=violet, linewidth=lw,linestyle='--')
+            setp(bp['caps'][j], color=violet, linewidth=lw)
+            setp(bp['caps'][j+qtile], color=violet, linewidth=lw)
+            
+        #@for
+            
+        # draw a line with true eigenvalues
+        
+        ax.plot(list(range(1,qtile+1)),
+                 true_eigs[xcoord],
+                 marker="o",
+                 markerfacecolor=bamboo, 
+                 markeredgecolor=bamboo,
+                 markersize=3,
+                 zorder=2)
+        
+        # draw titles, axes and etc.
+        
+        ax.set_title(i ,y=1.01,
+                  fontsize=10, color='black')
+        
+        ax.set_xticks(list(range(1,qtile+1)))
+        ax.set_xticklabels(['${\\hat{\lambda}_{'+ str(i) + '}}$' for i in xcoord+1],
+                            fontsize='small')
+        
+        
+        # show the difference between true eigenvalues and centers of boxplots
+     
+        ax.fill_between(list(range(1,qtile+1)), 
+                         box_medians[xcoord], 
+                         true_eigs[xcoord], 
+                         color='grey', 
+                         alpha='0.5')
+        # draw legend
+        
+        vleg = mlines.Line2D([], [],
+                     markeredgecolor=bamboo,
+                     markerfacecolor=bamboo,
+                     marker='o',
+                     linestyle='-',
+                     markersize=4,
+                     label='$\\lambda(\Sigma)$')
+       
+        mleg = mlines.Line2D([], [],
+                             color='grey',
+                             alpha=0.5,
+                             markeredgecolor='None',
+                             marker='s',
+                             linestyle='None',
+                             markersize=10,
+                             label='Bias')
+
+        ax.legend(handles=[vleg,mleg],
+                   numpoints=1, fancybox=True, framealpha=0.25)
+        
+        # draw bias 
+        bias = abs_dif(true_eigs,box_medians)
+        bias = round(bias,1)
+        ax.text(1, 5, 'Bias= ' + str(bias),
+                bbox=dict(facecolor='grey', alpha=0.5))
+
+    
+    #save the result
+    if save:
+        plt.savefig('N='+ str(N) + 
+                    ' T=' + str(T) + 
+                    ' simulations=' + str(simulations)+
+                    '.jpg',dpi=200)
+    
+    plt.show()
+    
+    #@for
+    
+#@def
 
 def make_eig_box_plots(fm, n_sims, signature, t, sim_eigs, true_eigs,
                        title, outputname, ylims=()):
