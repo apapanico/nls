@@ -6,18 +6,125 @@ import matplotlib
 matplotlib.use('qt5agg')
 import click
 from tqdm import tqdm
+
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
 
-from utils import *
+import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
+from pylab import setp
+
+
 from models import *
-from shrinkage import *
+from slr.classes import Simulation
+from slr.classes import StringSeqParamType
+STRING_SEQ = StringSeqParamType()
+
+from plotting import line_plot_eigs,box_plot_eigs
+from nls_minvar import * 
+from nls_lw import *
+from utils import *
+
+from cov.nlshrink import nlshrink_eig
+from cov.nlshrink import nlshrink_covariance
+
+from collections import defaultdict
+
+
+
+
+estimators_functions = {'nls_oracle':nls_oracle,'nls_asymptotic':nls_asymptotic,
+                        'nls_loo': nls_loo, 'nls_kfold': nls_kfold, 
+                        'minvar_nls_oracle': minvar_nls_oracle,
+                        'minvar_nls_loo': minvar_nls_loo,
+                        'minvar_nls_kfold_oracle': minvar_nls_kfold_oracle,
+                        'minvar_nls_kfold': minvar_nls_kfold,
+                        'minvar_nls_oracle_reg':minvar_nls_oracle_reg,
+                        'minvar_nls_kfold_reg':minvar_nls_kfold_reg}
 
 
 @click.group()
 def cli():
     pass
+
+
+
+def simulate_eigs(simulations=5,N=10,T=100,seed=1,estimators=['sample'],cov_model = 'uniform'):
+    
+
+    '''this function calculates eigenvalues for different estimators and 
+    for every simulated matrix stores the result in a hashtable''' 
+    
+    seeds        = range(seed, seed + simulations)
+    eigenvalues  = defaultdict(list)
+    
+    # create a covariance matrix wtih desired structure
+    
+    Sigma = cov_functions[cov_model](N)[0]
+    
+    # from this matrix create a simulation class that will include the 
+    # all eigenvalues, eigenvectors etc. and matrix of returns 
+    
+    SimObj = Simulation(Sigma,T)
+            
+    pbar = tqdm(total=simulations)
+
+    for i in range(simulations):
+        
+        # for every simulation generate a new matrix of returns 
+        SimObj.seed = seeds[i]
+        SimObj.sample()
+                
+        ''' Calculate eigenvalues with different estimators '''
+        
+        for est in estimators:
+            if est =='sample':
+                eigenvalues['sample' +'_'+'T='+str(T)+'_'+ 'N='+str(N)].append(SimObj.lam)
+            else:
+                kwargs = dict()                                     
+                if 'kfold' in est:
+                    kwargs['K'] =10
+                if 'reg' in est:
+                    kwargs['lmbda'] = 0.000005
+
+                eigenvalues[est +'_'+'T='+str(T)+'_'+ 'N='+str(N)].append(estimators_functions[est](SimObj,**kwargs))
+            #@if
+        #@for
+            
+  
+        pbar.update()
+    #@for
+        
+    return eigenvalues,SimObj.tau
+    
+    
+@cli.command()
+@click.option('--n', type=int, default=10)
+@click.option('--t', type=int, default=100)
+@click.option('--cov_model', default='uniform')
+@click.option('--estimators',type=STRING_SEQ, default='sample,minvar_nls_kfold,nls_asymptotic')
+@click.option('--simulations',type=int, default=5)
+@click.option('--seed', type=int, default=2)
+@click.option('--qtile', type=int, default=10)
+@click.option('--save', type=bool, default=False)
+
+def eig_bias(n,t,cov_model,estimators,simulations,seed,qtile,save):
+        
+    ''' 
+    This module demonstrates the downward/upward bias in eigenvalues 
+    for sample cov matrix as well as for other estimators.
+    ////////////////////////////////////////////////////////////////////
+                        Available estimators : 
+    'sample','minvar_nls_oracle','minvar_nls_kfold_oracle','nls_kfold',
+    'nls_loo','nls_oracle','minvar_nls_oracle_reg','minvar_nls_cv_reg',
+    'nls_asymptotic','minvar_nls_kfold','minvar_nls_loo' '''
+    
+    simResult = simulate_eigs(simulations=simulations,N=n,T=t,seed=seed,estimators=estimators,cov_model=cov_model)
+    if simulations==1:
+        line_plot_eigs(simResult,simulations=simulations,estimators=estimators,qtile=qtile,T=t,N=n,save=save)
+    else:
+        box_plot_eigs(simResult,simulations=simulations,estimators=estimators,qtile=qtile,T=t,N=n,save=save)  
+
 
 
 @cli.command()
@@ -87,6 +194,8 @@ def demo(n, y, cov_fun, loo, K, ylim, figsize, seed):
     plt.show()
 
 
+    
+    
 @cli.command()
 @click.option('--m', type=int, default=100)
 @click.option('--N', 'N', type=int, default=100)

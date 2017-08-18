@@ -137,8 +137,66 @@ def minvar_nls_oracle_reg(sim,lmbda):
     z = nnlsq_regularized(C @ np.diag(alpha), alpha, lmbda)
     #z = lsq_regularized(C @ np.diag(alpha),alpha,lmbda)
     interpolate_zeros(z)
+    
+    #print(z)
+    
     d = 1/z
     return d
+    
+    
+def minvar_nls_kfold_reg(sim,lmbda,K):
+    """Bona fide eigenvalues for new MinVar nonlinear shrinkage with 
+    regularization and non-negative lsq
+    Here we start from Sigma_est which is closest to Sigma in terms 
+    of Frobenious norm and is estimated with K-fold CV 
+    Then we do non-negative least squares with regularization"""
+
+    
+    T, N = sim.shape
+    U = sim.U
+    d = nls_kfold(sim,K,isotonic=True)
+    Sigma_est = U @ np.diag(d) @ U.T
+    alpha = U.T.dot(np.ones(N))
+    C = U.T.dot( Sigma_est).dot(U)
+    z = nnlsq_regularized(C @ np.diag(alpha), alpha, lmbda)
+    #z = lsq_regularized(C @ np.diag(alpha),alpha,lmbda)
+    #interpolate_zeros(z)
+    
+    #print(z)
+    
+    d = 1/z
+    return d
+    
+''' 
+
+Doesn`t work with nnlsq_regularize (produce infinite values) and works bad with 
+lsq_regularize
+   
+def minvar_nls_kfold_reg(sim,lmbda,K):
+    """Bona fide eigenvalues for new MinVar nonlinear shrinkage with regularization and non-negative lsq"""
+    
+    T, N = sim.shape
+    X,S = sim.X,sim.S
+    m = int(T / K)
+    z = np.zeros(N)
+    d = np.zeros(N)
+    
+    for k in range(K):
+        k_set = list(range(k * m, (k + 1) * m))
+        X_k = X[k_set, :]
+        S_k = (T * S - X_k.T.dot(X_k)) / (T - m)
+        _, U_k = eig(S_k)
+        # calculate C and alpha for the system
+        C_k = U_k.T.dot(X_k.T.dot(X_k)).dot(U_k)
+        alpha_k = U_k.T.dot(np.ones(N))
+        #solve the system for z
+        z=nnlsq_regularized(C_k @ np.diag(alpha_k), alpha_k, lmbda)
+        d+=1/z
+        
+    d=d/K
+
+    return d
+'''
 
 def lsq_regularized(A,b,lmbda):
     N = len(b)
@@ -160,6 +218,7 @@ def nnlsq_regularized(A,b,lmbda):
 def minvar_nls_kfold(sim,K, progress=False, trace=False,
                      upper_bound=True):
     """K-fold cross-validated eigenvalues for new MinVar nonlinear shrinkage"""
+    
     T, N = sim.shape
     m = int(T / K)
     X,S,lam = sim.X,sim.S,sim.lam
@@ -174,7 +233,10 @@ def minvar_nls_kfold(sim,K, progress=False, trace=False,
         X_k = X[k_set, :]
         S_k = (T * S - X_k.T.dot(X_k)) / (T - m)
         _, U_k = eig(S_k)
-
+        # this is a joint version. Lists of C and alpha are collected 
+        # and the system is solved for one z vector. z is not averaged here
+        # Note that this is also a bona-fide estimator since in C calculation 
+        # sample covariance matrix is used.
         C = U_k.T.dot(X_k.T.dot(X_k)).dot(U_k)
         C_list.append(C)
         alpha = U_k.T.dot(np.ones(N))

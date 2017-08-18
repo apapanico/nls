@@ -1,6 +1,8 @@
 import joblib
 from utils import eig, cov, sample, annualize_vol
 from models import * 
+import click
+
 
 
 class Simulation(object):
@@ -57,3 +59,15 @@ class Simulation(object):
         
         eigvals = self.tau if pop else self.lam
         return annualize_vol(eigvals / self.N)
+        
+        
+        
+        
+class StringSeqParamType(click.ParamType):
+    ''' Create a custom class to parse sequence of multiple string arguments in click'''
+    def convert(self, value, param, ctx):
+        try:
+            return value.split(',')
+        except ValueError:
+            self.fail('%s is not a valid sequence' % value, param, ctx)
+
