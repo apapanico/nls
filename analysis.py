@@ -39,7 +39,8 @@ estimators_functions = {'nls_oracle':nls_oracle,'nls_asymptotic':nls_asymptotic,
                         'minvar_nls_loo': minvar_nls_loo,
                         'minvar_nls_kfold_oracle': minvar_nls_kfold_oracle,
                         'minvar_nls_kfold': minvar_nls_kfold,
-                        'minvar_nls_oracle_reg':minvar_nls_oracle_reg}
+                        'minvar_nls_oracle_reg':minvar_nls_oracle_reg,
+                        'minvar_nls_kfold_reg':minvar_nls_kfold_reg}
 
 
 @click.group()
@@ -82,7 +83,7 @@ def simulate_eigs(simulations=5,N=10,T=100,seed=1,estimators=['sample'],cov_mode
             else:
                 kwargs = dict()                                     
                 if 'kfold' in est:
-                    kwargs['K'] = 10
+                    kwargs['K'] =10
                 if 'reg' in est:
                     kwargs['lmbda'] = 0.000005
 
@@ -115,8 +116,8 @@ def eig_bias(n,t,cov_model,estimators,simulations,seed,qtile,save):
     ////////////////////////////////////////////////////////////////////
                         Available estimators : 
     'sample','minvar_nls_oracle','minvar_nls_kfold_oracle','nls_kfold',
-    'nls_loo','nls_oracle','minvar_nls_oracle_reg','nls_asymptotic',
-    'minvar_nls_kfold','minvar_nls_loo' '''
+    'nls_loo','nls_oracle','minvar_nls_oracle_reg','minvar_nls_cv_reg',
+    'nls_asymptotic','minvar_nls_kfold','minvar_nls_loo' '''
     
     simResult = simulate_eigs(simulations=simulations,N=n,T=t,seed=seed,estimators=estimators,cov_model=cov_model)
     if simulations==1:
