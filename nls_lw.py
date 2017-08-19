@@ -58,11 +58,6 @@ def _nls_cv(sim, K):
         tmp = (U_k.T.dot(X_k.T)**2).sum(axis=1)
         d += tmp / T
     return d
-    
-    
-
-                        
-                        
 
 
 # Old versions are commented out but left for history for now
@@ -102,4 +97,3 @@ def _nls_cv(sim, K):
 #         tmp = (U_k.T.dot(X_k.T)**2).sum(axis=1)
 #         d += tmp / T
 #     return isotonic_regression(d) if isotonic else d
-

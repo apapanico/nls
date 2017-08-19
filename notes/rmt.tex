@@ -11,57 +11,69 @@
 
 \newcommand{\Tr}{\mathrm{Tr}}
 
-I demonstrate here the fundamentals of RMT, the Marchenko-Pastur theorem, and
-non-linear shrinkage, especially as it relates to minimizing out-of-sample
-portfolio variance.  I will then try to sketch out how these results may be
-extended to producing unbiased variance forecasts.
+This note outlines a new approach to convariance shrinkage of eigenvalues for
+the purpose of improved estimation of minimum variance portfolios and their
+risk.  We outline first the basic setup of the high-dimensional estimation
+problem and explore the fundamentals of Random Matrix Theory and the Marchenko-
+Pastur theorem.  We then motivate the new shrinkage approach by studying the
+non-linear shrinkage approach of \cite{Ledoit2017Nonlinear}, especially as it
+relates to minimizing out-of-sample portfolio variance.  Finally we sketch out
+the preliminaries of how these results may be extended to producing unbiased
+variance forecasts.
 
-\section{Setup}
+\section{Introduction}
+
+We first setup the problem and introduce the concepts of Random Matrix Theory
+and the Marchenko-Pastur theorem
+
+\subsection{Setup}
 
 To begin, assume we observe i.i.d.\ random values in a $T \times N$ matrix,
-$$
+\begin{equation}\label{eq:X}
 	X_N = \begin{bmatrix} 
 					\text{---} & x_1    & \text{---} \\
 					           & \vdots &            \\
 					\text{---} & x_T    & \text{---}
 				\end{bmatrix}
-$$
+\end{equation}
 where $T$ is the number of observations and $N$ is the number of variables (ie.
-$x_i \in \mathbb{R}^N$).  I index by $N$ since $T$ and $N$ will be growing to
-infinity.  In particular, we will take $T / N \rightarrow y > 1$.  Let
-$\Sigma_N$ be the covariance matrix for $X_N$.  Furthermore, define the
-empirical spectral distribution (e.s.d.) for the eigenvalues of $\Sigma_N$ as,
-$$
+$x_i \in \mathbb{R}^N$).  We index by $N$ since $T$ and $N$ will be growing to
+infinity.  In particular, we will take $T / N \rightarrow y > 1$.  The quantity
+$y$ is known as the concentration ratio. Let $\Sigma_N$ be the covariance matrix
+for $X_N$.  Furthermore, define the empirical spectral distribution (e.s.d.) for
+the eigenvalues of $\Sigma_N$ as,
+\begin{equation}\label{eq:H_N}
 	H_N(\tau) = \frac{1}{N}\sum_{i=1}^N \mathbbm{1}_{[\tau_{i}, +\infty)}(\tau)
-$$
+\end{equation}
 where $\tau_{1}, \ldots, \tau_N$ is the system of eigenvalues.  It will be
 implicit that this system depends on $N$. 
 
 A basic assumption is that $H_N(\tau)$ converges to a nonrandom limit everywhere
 with support on a compact interval\footnote{We are going to assume the limit is
 continuous and on a compact interval to simplify this since otherwise this
-statement needs to be more precise.}.
+statement needs to be more precise.}.  This is controversial in the context of 
+a factor model but for now we refrain from going into the details of why.
 
 An example of a limit law $H$ would be a truncated exponential distribution
 where,
-\begin{gather*}
+\begin{gather}\label{eq:H_gamma}
 	H_\gamma(\tau) = \frac{1 - e^{-\gamma(\tau - 1)}}{1 - e^{-\gamma}}, 
 		\quad \mathrm{supp}(H) = [1, 2].
-\end{gather*}
+\end{gather}
 The formula for the eigenvalues would be,
-$$
+\begin{equation}\label{eq:tau}
 	\tau = 1 - \frac1\gamma \log\left( 1 - x(1-e^{-\gamma}) \right),
 	\quad x \in [0, 1],
-$$
+\end{equation}
 or for some finite $N$,
-$$
+\begin{equation}\label{eq:tau_i}
 	\tau_i = 1 - \frac1\gamma \log\left( 1 - x_i(1-e^{-\gamma}) \right),
 	\quad x_i = \frac{i - 1}{N - 1},\ i = 1, \ldots, N
-$$
+\end{equation}
 
-Figure \ref{fig:eigs} shows the spectrum for this function $H$ as well as the
-empirical spectrum of the sample covariance matrix for different $N$, which we
-define next.
+Figure \ref{fig:eigs} shows the spectrum for $H_\gamma$ as well as the empirical
+spectrum of the sample covariance matrix for different $N$, which we define
+next.
 
 \begin{figure}[htbp]
 	\centering
@@ -77,54 +89,51 @@ define next.
 	\label{fig:eigs}
 \end{figure}
 
+\section{Marchenko-Pastur Theorem}
 
 Define the sample covariance matrix as,
-$$
+\begin{equation}\label{eq:sample_cov}
 	S_N = \frac1T X_N^T X_N
-$$
+\end{equation}
 and the e.s.d.\ of $S_N$ as
-$$
+\begin{equation}\label{eq:F_N}
 	F_N(\lambda)
 		 = \frac{1}{N}\sum_{i=1}^N \mathbbm{1}_{[\lambda_{i}, +\infty)}(\lambda)
-$$
+\end{equation}
 where $\lambda_{1}, \ldots, \lambda_N$ is the system of eigenvalues.  It is not
 assumed that $F_N$ has a limit or what it is.  That's where the Marchenko-Pastur
 theorem comes in.
 
-
-\section{Main Marchenko-Pastur Result}
-
-
-The main result of RMT and Marchenko-Pastur (MP) is convergence of $F_N$ to a
-limit law $F$ almost surely. The result is not direct but instead states
-convergence in terms of the \emph{Stieltjes transform} of $F_N$ and $F$.
+The main result of Random Matrix Theory and Marchenko-Pastur (MP) is convergence
+of $F_N$ to a limit law $F$ almost surely. The result is not direct but instead
+states convergence in terms of the \emph{Stieltjes transform} of $F_N$ and $F$.
 
 The Stieltjes transform of a nondecreasing function $G$ is,
-$$
+\begin{equation}\label{eq:stieltjes}
 	m_G(z) = \int_{-\infty}^\infty \frac{dG(x)}{x - z}
-$$
+\end{equation}
 where $z \in \mathbb{C}^+ = \left\{ z \in \mathbb{C}: \mathrm{Im}(z) >
 0\right\}$.
 
 For an empirical distribution like $F_N$, this is,
-$$
+\begin{equation}\label{eq:empirical_stieltjes}
 	m_{F_N}(z)
 		 = \frac1T \sum_{i=1}^N \frac{1}{\lambda_{i} - z}
 		 = \frac1T \Tr\left[(S_n - zI)^{-1}\right]
-$$
+\end{equation}
 
-The Marchenko-Pastur result is that $m_{F_N}(z) \rightarrow m_{F}(z)$ almost
+The Marchenko-Pastur theorem is that $m_{F_N}(z) \rightarrow m_{F}(z)$ almost
 surely for all $z \in \mathbb{C}^+$ and $m_{F}(z)$ is defined through the \emph
 {Marchenko-Pastur equation},
-$$
+\begin{equation}\label{eq:mp_equation}
 	m_F(z) = \int_{\mathrm{supp}(H)}
 			 \frac{dH(\tau)}{\tau\left[1 - y^{-1} - y^{-1}z m_F(z) \right] - z}.
-$$
+\end{equation}
 In few cases\footnote{Perhaps only one?  This would be the case when all
-eigenvalues are equal to a common value} can this equation be solved
-analytically.  It can potentially be solved numerically for specified $H$ but
-that is not really important.  Moreover, the limit $F$ would come from the
-inversion of $m_F(z)$ given by,
+eigenvalues are equal to a common value} can the Marchenko-Pastur equation be
+solved analytically.  It can potentially be solved numerically for specified $H$
+but this is not particularly effective since it requires a model for $H$.
+Moreover, the limit $F$ would come from the inversion of $m_F(z)$ given by,
 $$
 	F(b) - F(a) = \lim_{\eta \rightarrow0^+} 
 			\frac1\pi \int_a^b \mathrm{Im}\left[ m_F(\xi + i\eta\right] d\xi
@@ -134,35 +143,36 @@ Figure \ref{fig:eigs} shows the e.s.d.\ $F_N$ for various values of $N$.  It may
 be difficult to see but for $N=1000$, the e.s.d.\ shows convergence to the limit
 compared to $N=50$.
 
-\subsection{A Generalization of M-P}
+\subsection{A Generalization of the Marchenko-Pastur Theorem}
 
-\cite{Ledoit2011Eigenvectors} show how you can generalization to functions like
-$$
+\cite{Ledoit2011Eigenvectors} show a generalization of the Marchenko-Pastur
+Theorem to functionals of the form,
+\begin{equation}\label{eq:Omega_N}
 	\Omega^g_N(\lambda)
 		 = \frac{1}{N}\sum_{i=1}^N \mathbbm{1}_{[\lambda_{i}, +\infty)}(\lambda)
 		 			\sum_{j=1}^N |u_i^T v_j|^2 g(\tau_j)
-$$
-where
+\end{equation}
+where the sample covariance and population covariance have eigendecompositions,
 \begin{gather*}
 	S_N = U\Lambda U^T, 
 		\quad U = \begin{bmatrix} u_1 & \cdots & u_N \end{bmatrix}
 		\quad \Lambda = \mathrm{Diag}(\lambda_1, \ldots, \lambda_N),\\
 	\Sigma_N = V T V^T, 
 		\quad V = \begin{bmatrix} v_1 & \cdots & v_N \end{bmatrix}
-		\quad T = \mathrm{Diag}(\tau_1, \ldots, \tau_N)
+		\quad T = \mathrm{Diag}(\tau_1, \ldots, \tau_N).
 \end{gather*}
 
 The Stieltjes transform of $\Omega^g_N$ is given by,
-\begin{align*}
+\begin{align} \label{eq:Theta_N}
 	\Theta^g_N(z)
 		& = \frac{1}{N}\sum_{i=1}^N \frac{1}{\lambda_i - z}
 		  		\sum_{j=1}^N |u_i^T v_j|^2 g(\tau_j) \\
 		& = \frac{1}{N}\Tr\left[(S_N - zI)^{-1} g(\Sigma_N)\right]
-\end{align*}
+\end{align}
 where in an abuse of notation, $g(\Sigma_N)$ is considered as a spectral
 function, ie. it applies $g$ to the eigenvalues of $\Sigma_N$.
 
-The way to see how the Trace operator relates, you just do some simple linear
+The relationship to the Trace operator can be seen through some simple linear
 algebra:
 \begin{align*}
 	\Tr\left[(S_N - zI)^{-1} g(\Sigma_N)\right]
@@ -170,34 +180,38 @@ algebra:
 		& = \Tr\left[U^T(\Lambda - zI)^{-1} UV g(T) V^T \right] \\
 		& = \Tr\left[(\Lambda - zI)^{-1} (UV) g(T) (UV)^T \right]
 \end{align*}
-where expanding out the last term gives $\Theta^g_N(z)$.  Furthermore, if you
-take $g \equiv 1$, then you get back $F_N$ and $m_{F_N}$.
+where expanding out the last term gives $\Theta^g_N(z)$.  Furthermore, if we
+take $g \equiv 1$, we get back $F_N$ and $m_{F_N}$.
 
 The generalized result for $\Omega^g_N(\lambda)$ and $\Theta^g_N(z)$ is $\Theta^g_N(z)$
 converges a.s.\ to $\Theta^g(z)$ for all $z \in \mathbb{C}^+$ where $\Theta^g(z)$ 
 is given by,
-$$
+\begin{equation}\label{eq:Theta}
 	\Theta^g(z) = \int_{\mathrm{supp}(H)}
 			 \frac{g(\tau)dH(\tau)}{\tau\left[1 - y^{-1} - y^{-1}z m_F(z) \right] - z}.
-$$
+\end{equation}
 
 Note how the integration kernel in the denominator stays the same and the result
 only differs in our weighting scheme $g(\tau)$.
 
-\subsection{Optimal Shrinkage}
+\section{Nonlinear Shrinkage Estimators}
 
-\subsubsection{Frobenius Loss}\label{sec:fro_loss}
+\subsection{Rotation Invariant Class}
 
-If we consider the class of estimators
-$$
+We restrict our consideration to the class of estimators,
+\begin{equation}\label{eq:rotation_class}
 	\hat{\Sigma}_N = U D U^T
-$$
-where $U$ are the eigenvectors of the sample covariance matrix, then we can try
-to minimize Frobenius error via,
-$$
-	\min_D \| UDU^T - \Sigma_N\|_F^2
-$$
-The optimal eigenvalues are
+\end{equation}
+where $U$ are the eigenvectors of the sample covariance matrix $S$.  The choice
+variable is the diagonal matrix of eigenvalues $D$.
+
+\subsection{Frobenius Loss}\label{sec:fro_loss}
+
+We aim to minimize Frobenius error via,
+\begin{equation}\label{eq:fro_loss}
+	\min_D \| UDU^T - \Sigma_N\|_F^2.
+\end{equation}
+The optimal oracle eigenvalues are
 \begin{align}\label{eq:fro_oracle}
 	D^* = \mathrm{Diag}(\tilde{d}_1, \ldots, \tilde{d}_N)
 		  = \mathrm{Diag}(u_1^T \Sigma_N u_1, \ldots, u_N^T\Sigma_N u_N)
@@ -205,29 +219,28 @@ The optimal eigenvalues are
 
 From before, if we take $\Omega^g_N(\lambda)$ and $\Theta^g_N(z)$ for $g(\tau) =
 \tau$, then if we define,
-$$
+\begin{equation*}
 	\Delta_N(\lambda)
 		 = \frac1N \sum_{i=1}^N 
 		 			\tilde{d}_i \mathbbm{1}_{[\lambda_i, \infty)}(\lambda)
 		 = \Omega^g_N(\lambda)
-$$
+\end{equation*}
 then based on previous stated result about the convergence of $\Theta^g_N(z)$,
 \cite{Ledoit2011Eigenvectors} show through verifying with calculus that
 $\Delta_N(\lambda) \rightarrow \Delta(\lambda)$ almost surely for all $\lambda
 \ne 0$ and
-$$
+\begin{equation*}
 	\Delta(\lambda) = \Omega^g(\lambda) = \int_{-\infty}^\lambda \delta(x)dF(x)
-$$
+\end{equation*}
 where 
-$$
+\begin{equation}\label{eq:delta}
 	\delta(\lambda) = 
 		\begin{cases}
 			\frac{\lambda}{|1 - y^{-1} - y^{-1}\lambda m_F(\lambda)|^2} & \lambda > 0,\\
 			% \frac{y}{(1 - y)m_F(0)} & \lambda = 0,\\
 			0 & \text{otherwise.}
 		\end{cases}
-$$
-
+\end{equation}
 
 The summary of this is that while the oracle estimates that are optimal,
 $\tilde{d}_i = u_i^T \Sigma_N u_i$, are completely infeasible, we use
@@ -244,31 +257,36 @@ actually estimate $m_F(z)$ and thus produce a consistent estimate of the
 shrinkage function but this has in fact been done in \cite{Ledoit2015Spectrum}.
 
 
-\subsubsection{Out-of-Sample Variance Loss}\label{sec:oos_var_loss}
+\subsection{Out-of-Sample Variance Loss}\label{sec:oos_var_loss}
 
-The goal here is to minimize
-$$
-	\mathcal{L}(\hat{\Sigma}_N, \Sigma_N, m)
+An alternative goal illustrated in \cite{Ledoit2017Nonlinear} is to minimize
+the out-of-sample variance of a portfolio.  The loss function is given by,
+\begin{equation}\label{eq:oos_loss}
+	\mathcal{L}(\hat{\Sigma}_N, \Sigma_N, \hat{w})
 		:= \hat{w}^T \Sigma_N \hat{w}
-		 = m^Tm \times \frac
-		 	{m^T \hat{\Sigma}_N^{-1} \Sigma_N \hat{\Sigma}_N^{-1} m}
-		 	{\left(m^T \hat{\Sigma}_N^{-1} m\right)^2}
-$$
-for some rotation-equivariant estimator $\hat{\Sigma}_N$ given by 
-$$
-	\hat{\Sigma}_N = U D U^T
-$$
-where $D = \mathrm{Diag}(\hat{\rho}(\lambda_1), \ldots,
-\hat{\rho}(\lambda_N))$ and $U$ are the eigenvectors of $S_N$.  Here $\hat{w}$
-is a scaled form of the long-short maximum Sharpe ratio portfolio,
-$$
+		 % = m^Tm \times \frac
+		 % 	{m^T \hat{\Sigma}_N^{-1} \Sigma_N \hat{\Sigma}_N^{-1} m}
+		 % 	{\left(m^T \hat{\Sigma}_N^{-1} m\right)^2}
+\end{equation}
+for some rotation-equivariant estimator $\hat{\Sigma}_N$ given by
+\eqref{eq:rotation_class} and some estimated portfolio $\hat{w}$.
+
+\cite{Ledoit2017Nonlinear} consider $\hat{w}$ as a scaled form of the long-short
+maximum Sharpe ratio portfolio,
+\begin{equation}\label{eq:max_sharpe_portfolio}
 	\hat{w} 
 		= \frac{\sqrt{ m^Tm }}{m^T \hat{\Sigma}_N^{-1} m} \times \hat{\Sigma}_N^{-1} m.
-$$
+\end{equation}
 where $m$ is the \emph{return predictive signal} aka expected return and is
 distributed independently of $S_N$ and its distribution is rotation invariant.
 The scaling $\sqrt{ m^Tm }$ was chosen so that the portfolio weights are
-invariant to $m$.
+invariant to $m$.  Under this portfolio, the loss function can be expressed as,
+\begin{equation}\label{eq:oos_max_sharpe_loss}
+	\mathcal{L}(\hat{\Sigma}_N, \Sigma_N, m)
+		 = m^Tm \times \frac
+		 	{m^T \hat{\Sigma}_N^{-1} \Sigma_N \hat{\Sigma}_N^{-1} m}
+		 	{\left(m^T \hat{\Sigma}_N^{-1} m\right)^2}
+\end{equation}
 
 From Lemma 1 in \cite{Ledoit2011Eigenvectors} based on the properties of $m$,
 $$
@@ -277,7 +295,7 @@ $$
 $$
 almost surely so that they converge together to,
 $$
-	\int \frac{1}{\hat{\rho}(\lambda)}dF(\lambda)
+	\int \frac{1}{\hat{\rho}(\lambda)}dF(\lambda).
 $$
 
 A similar line of reasoning shows that 
@@ -286,8 +304,9 @@ $$
 		- \frac1N \Tr(\hat{\Sigma}_N^{-1} \Sigma_N \hat{\Sigma}_N^{-1})
 		\rightarrow 0
 $$
-almost surely so that they converge together.  To what becomes evident by
-looking at the theorems for the generalization of the M-P result.  Namely,
+almost surely so that they converge together.  The limit becomes evident by
+looking at the theorems for the generalization of the Marchenko-Pastur theorem.
+Namely,
 $$
 	\frac1N \Tr(\hat{\Sigma}_N^{-1} \Sigma_N \hat{\Sigma}_N^{-1})
 		 = \frac1N \Tr(U^T \Sigma_N U D^{-2})
@@ -296,7 +315,7 @@ $$
 But this is basically the same as $\Delta_N$ from the previous section, so it
 turns out that the limit is,
 $$
-	\int \frac{\delta(\lambda)}{\hat{\rho}(\lambda)^2}dF(\lambda)
+	\int \frac{\delta(\lambda)}{\hat{\rho}(\lambda)^2}dF(\lambda).
 $$
 
 These two limit results show that,
@@ -320,29 +339,26 @@ population covariance.
 The upshot here is that even for this new loss function, the shrinkage is
 actually the same as the one for the Frobenius norm.
 
-\subsection{Cross-Validation for Optimal Shrinkage}
+\subsection{Cross-Validation for Optimal Nonlinear Shrinkage}
 
-The optimal shrinkage is $\delta(\lambda)$ and thus is the quantity of interest.
+In Remark 5.2 of \cite{Ledoit2012Nonlinear}, a cross-validated estimator is
+proposed at the suggestion of a referee.  We illustrate this estimator here and
+show how it is improved in \cite{Bartz2016CrossValidation}.
 
 \subsubsection{Leave-One-Out CV}\label{sec:loo}
 
-Based on the suggestion of a referee, in Remark 5.2 of
-\cite{Ledoit2012Nonlinear}, a cross-validated estimator is proposed.  It is
-given here. Let $\left(\lambda_1^{(k)}, \ldots, \lambda_N^{(k)}\right)$ and
-$\left(u_1^{(k)}, \ldots, u_N^{(k)}\right)$ denote a system of eigenvalues and
-eigenvectors of the sample covariance matrix computed from all the observed
-data, except for the $k$-th observation $x_k$.
+Let $S^{(k)}$ denote the sample covariance matrix computed from all the observed
+data, except for the $k$-th observation $x_k$.  Further let $\lambda_1^{(k)},
+\ldots, \lambda_N^{(k)}$ and $u_1^{(k)}, \ldots, u_N^{(k)}$ denote the system of
+eigenvalues and eigenvectors of $S^{(k)}$, respectively.
 
 From Sections \ref{sec:fro_loss} and \ref{sec:oos_var_loss}, the quantity to
-compute is,
-$$
-	\tilde{d}_i= u_i^T \Sigma_N u_i,
-$$
-which leads to the cross-validation approximation,
-$$
+compute is $\tilde{d}_i= u_i^T \Sigma_N u_i$, which leads to the 
+cross-validation approximation,
+\begin{equation}\label{eq:rho_cv}
 	\tilde{d}_i \approx \rho^{cv}(\lambda_i) 
 		\equiv \frac1T \sum_{k=1}^T ({u_i^{(k)}}^T x_k)^2
-$$
+\end{equation}
 
 The motivation comes from the fact that,
 $$
@@ -356,44 +372,7 @@ $$
 		 = \mathbb{E}\left[{u_i^{(k)}}^T \Sigma_N u_i^{(k)}\right]
 $$
 
-The full algorithm is given by Algorithm \ref{alg:nls_loo}.
-
-\begin{algorithm}
-	\caption{Leave-One-Out Cross Validation for Non-Linear Shrinkage}
-	\label{alg:nls_loo}
-	\begin{algorithmic}[1]
-	\Require $X = [x_1, \ldots, x_T]^T \in \mathbb{R}^{T\times N}$
-	\Require $\Sigma_N = \mathrm{Cov}(X)$
-	\Procedure{LOO-CV}{$X$}
-
-		\State $S \gets \frac1T X^T X$
-		\State 
-				$U \gets [u_1, \ldots, u_N] \in \mathbb{R}^{N\times N}$,
-				\quad $\Lambda \gets \mathrm{Diag}(\lambda_1, \ldots, \lambda_N)$,
-				\quad \mbox{s.t.}\quad $S = U \Lambda {U}^T$
-
-		\State $\tilde{d} \gets [0, \ldots, 0]^T \in \mathbb{R}^{N}$
-		\While{$k\le T$}
-			\State $X_{-k} \gets [x_1, \ldots, x_{k-1}, x_{k+1}, \ldots, x_T]^T$
-			\State $S^{(k)} \gets \frac{1}{T-1} X_{-k}^T X_{-k} $
-			\State 
-				$U^{(k)} \gets [u^{(k)}_1, \ldots, u^{(k)}_N] \in \mathbb{R}^{N\times N}$,
-				\quad $\Lambda^{(k)} 
-					\gets \mathrm{Diag}(\lambda^{(k)}_1, \ldots, \lambda^{(k)}_N)$,
-				\quad \mbox{s.t.}\quad $S^{(k)} = U^{(k)} \Lambda^{(k)} {U^{(k)}}^T$
-			\State $\tilde{d}_i \gets \tilde{d}_i 
-				+ \frac1T ({U^{(k)}}^T x_k)_i^2, \quad i = 1, \ldots, N$
-			\State $k \gets k+1$
-		\EndWhile
-
-		\State $\hat{\Sigma}_N \gets UDU^T, \quad 
-			\mbox{where}\quad D = \mathrm{Diag}(\tilde{d}_1, \ldots, \tilde{d}_N)$
-
-		\State \textbf{return} $\hat{\Sigma}_N$ 
-				\Comment{The LOO-CV non-linear shrinkage estimator for $\Sigma_N$.}
-	\EndProcedure
-	\end{algorithmic}
-\end{algorithm}
+The full algorithm is given by Algorithm \ref{alg:nls_loo} in the appendix.
 
 
 
@@ -401,66 +380,25 @@ The full algorithm is given by Algorithm \ref{alg:nls_loo}.
 
 The standard LOO cross-validation estimator in the previous section is known to
 have poor properties, as discussed in \cite{Bartz2016CrossValidation}.  One
-possible fix is to use $K$-fold sampling of the data to produce an estimate,
-$$
+possible fix is to use $K$-fold sampling of the data to produce a stabilized
+estimate.  
+
+Now we let $S^{(k)}$ denote the sample covariance matrix computed from all the
+observed data, except for the $k$-th fold set of observations $X_k \in
+\mathbb{R}^{T/K \times N}$.  Further let $\lambda_1^{(k)}, \ldots,
+\lambda_N^{(k)}$ and $u_1^{(k)}, \ldots, u_N^{(k)}$ denote the system of
+eigenvalues and eigenvectors of $S^{(k)}$, respectively.
+
+The $K$-fold cross-validation estimator is given by,
+\begin{equation}\label{eq:rho_kcv}
 	\rho^{kcv}(\lambda_i) 
-		\equiv \frac1K \sum_{k=1}^K {u_i^{(k)}}^T X_k X_k^T u_i^{(k)}
-$$
-where $X_k$ contains the observations from the $k$-th fold and $u_i^{(k)}$ is
-the $i$-th eigenvector of the sample covariance matrix computed on the data with
-the $k$-th fold removed.
+		\equiv \frac1K \sum_{k=1}^K {u_i^{(k)}}^T S^{(k)} u_i^{(k)}.
+\end{equation}
+
+The full algorithm is given by Algorithm \ref{alg:nls_kcv} in the appendix.
 
 
-\begin{algorithm}
-	\caption{$K$-Fold Cross Validation for Non-Linear Shrinkage}
-	\label{alg:nls_kcv}
-	\begin{algorithmic}[1]
-	\Require $X = [x_1, \ldots, x_T]^T \in \mathbb{R}^{T\times N}$
-	\Require $\Sigma_N = \mathrm{Cov}(X)$
-	\Require $K \in \mathbb{Z}, \quad K > 1$
-	\Procedure{$K$-Fold-CV}{$X$}
-
-		\State $S \gets \frac1T X^T X$
-		\State 
-				$U \gets [u_1, \ldots, u_N] \in \mathbb{R}^{N\times N}$,
-				\quad $\Lambda \gets \mathrm{Diag}(\lambda_1, \ldots, \lambda_N)$,
-				\quad \mbox{s.t.}\quad $S = U \Lambda {U}^T$
-
-		\State $m \gets T / K$
-		\State $\mathcal{K} \gets \{(1, \ldots m), \ldots, (T-m+1, \ldots, T)\}$
-
-		\State $\tilde{d} \gets [0, \ldots, 0]^T \in \mathbb{R}^{N}$
-		\State $k \gets 1$
-		\While{$k\le K$}
-			\State $X_{-k} \gets [x_{j_1}, \ldots, x_{j_{(T-m)}}]^T \in \mathbb{R}^{(T-m)\times N}, 
-				\quad j_i \notin \mathcal{K}_k$
-			\State $X_{k} \gets [x_{\ell_1}, \ldots, x_{\ell_m}]^T \in \mathbb{R}^{m\times N}, 
-				\quad \ell_i \in \mathcal{K}_k$
-			\State $S^{(k)} \gets \frac{1}{T-m} X_{-k}^T X_{-k} $
-
-			\State 
-				$U^{(k)} \gets [u^{(k)}_1, \ldots, u^{(k)}_N] \in \mathbb{R}^{N\times N}$,
-				\quad $\Lambda^{(k)} 
-					\gets \mathrm{Diag}(\lambda^{(k)}_1, \ldots, \lambda^{(k)}_N)$,
-				\quad \mbox{s.t.}\quad $S^{(k)} = U^{(k)} \Lambda^{(k)} {U^{(k)}}^T$
-
-
-			\State $\tilde{d}_i \gets \tilde{d}_i 
-				+ \frac1T {u^{(k)}_i}^T (\frac1m X_{k}^T X_{k}) u^{(k)}_i 
-				\quad i = 1, \ldots, N$
-			\State $k \gets k+1$
-		\EndWhile
-
-		\State $\hat{\Sigma}_N \gets UDU^T, \quad 
-			\mbox{where}\quad D = \mathrm{Diag}(\tilde{d}_1, \ldots, \tilde{d}_N)$
-
-		\State \textbf{return} $\hat{\Sigma}_N$ 
-				\Comment{The $K$-Fold-CV non-linear shrinkage estimator for $\Sigma_N$.}
-	\EndProcedure
-	\end{algorithmic}
-\end{algorithm}
-
-\subsubsection{Isotonic-Leave-One-Out CV}\label{sec:icv}
+\subsubsection{Isotonic Regression and Cross-Validation Estimators}\label{sec:icv}
 
 Another easy and well-behaved fix is to apply isotonic regression to produce an
 improved estimator $\rho^{icv}(\lambda_i)$.   This is given by the solution to
@@ -475,19 +413,19 @@ the optimization problem,
   \end{aligned}
 \end{equation*}
 
-\subsubsection{Isotonic-K-Fold CV}\label{sec:ikcv}
+% \subsubsection{Isotonic-K-Fold CV}\label{sec:ikcv}
 
 The isotonic regression can also be applied to the $K$-fold CV estimator that
 will be called $\rho^{ikcv}(\lambda_i)$.
 
 \subsubsection{Performance}
 
-\cite{Bartz2016CrossValidation} shows that $\rho^{cv}(\lambda_i)$ is terrible as
-an estimator.  The main issue is instability in the eigenvalues/eigenvectors
-when dropping a single observation.  This is most simply mitigated by using
-$\rho^{kcv}(\lambda_i)$, which shows huge improvement in Figure \ref{fig:cv}.
-Applying isotonic regression, whether to the $\rho^{cv}(\lambda_i)$ or
-$\rho^{kcv}(\lambda_i)$ gives the best results.
+\cite{Bartz2016CrossValidation} shows that $\rho^{cv}(\lambda_i)$ is a poor
+performing estimator.  The main issue is instability in the eigenvalues \&
+eigenvectors when dropping a single observation.  This is most simply mitigated
+by using $\rho^{kcv}(\lambda_i)$, which shows huge improvement in Figure
+\ref{fig:cv}. Applying isotonic regression, whether to the
+$\rho^{cv}(\lambda_i)$ or $\rho^{kcv}(\lambda_i)$ gives the best results.
 
 
 	\begin{figure}[htbp]
@@ -507,13 +445,12 @@ $\rho^{kcv}(\lambda_i)$ gives the best results.
 			validated estimator described in \ref{sec:icv}.  \emph {10f-CVC} refers to
 			the 10-fold cross-validated estimator described in \ref{sec:kcv}.  And
 			\emph{iso-10f-CVC} refers to the 10-fold, isotonic cross-validated
-			estimator described in \ref{sec:ikcv}. }
+			estimator described in \ref{sec:icv}. }
 		\label{fig:cv}
 	\end{figure}
 
 
-\section{Optimal Shrinkage for Unbiased Variance Ratios}
-
+\section{Optimal Nonlinear Shrinkage for Unbiased Variance Ratios}
 
 
 There are a few problems with the above methodologies that we have run into (and
@@ -553,11 +490,14 @@ and $\hat{\Sigma}_N$ is an estimator.
 
 \subsection{Maximum Sharpe Portfolio}
 
-\begin{thm}[Oracle Shrinkage for Variance Ratio of Maximum Sharpe Ratio
+\begin{thm}[Asymptotic Shrinkage for Variance Ratio of Maximum Sharpe Ratio
 	Portfolio] Under the same setup as Theorem 4.1 of \cite{Ledoit2017Nonlinear},
-	the same oracle estimator of the covariance matrix that that minimizes out-of-
-	sample variance also minimizes the almost sure limit of the loss function
-	$\mathcal{R}(\hat{\Sigma}_N, \Sigma_N, \hat{w}_N)$.
+	the asymptotic nonlinear shrinkage estimator $\delta(\lambda)$ given in
+	\eqref{eq:delta} that that minimizes Frobenius loss \eqref{eq:fro_loss} and
+	out-of-sample variance in \eqref{eq:oos_max_sharpe_loss} also minimizes the
+	almost sure limit of the loss function $\mathcal{R}(\hat{\Sigma}_N, \Sigma_N,
+	\hat{w}_N)$ where $\hat{w}_N$ is the maximum Sharpe ratio portfolio given by
+	\eqref{eq:max_sharpe_portfolio}.
 \end{thm}
 
 {\bf Sketch:}
@@ -640,7 +580,7 @@ $$
 \begin{thm}[Oracle Shrinkage for Variance Ratio of Minimum Variance Portfolio]
 	Let $X \in \mathbb{R}^{T \times N}$ denote $T$ i.i.d.\ draws from an
 	$N$-dimensional distribution with covariance $\Sigma_N$.  Define the sample
-	covariance matrix as $S = \frac1T X^T X$ with eigendecomposition $S = U\Delta
+	covariance matrix as $S = \frac1T X^T X$ with eigendecomposition $S = U\Lambda
 	U^T$.
 
 	Let the class of rotation invariant covariance estimators be defined by,
@@ -779,7 +719,7 @@ choose $D$.  One possible work that may have related results is
 these kinds of functionals.  More needs to be done to study that work and check
 if it fits the framework.
 
-\subsubsection{Proposed Estimators}
+\subsubsection{Proposed Cross-Validation Estimators}
 
 The solution $z$ to the linear system,
 $$
@@ -796,14 +736,21 @@ serve as \emph{bona fide} estimators.
 
 \begin{enumerate}
 
-\item \emph{Vanilla Leave-One-Out with Isotonic Regression}
+\item \emph{MinVar Leave-One-Out Cross-Validation with Isotonic Regression}
+
+See Algorithm \ref{alg:minvar_loo_cv} in the appendix for more detailed implementation.
 
 The first proposed estimator is a simple cross-validation estimator using Leave-
 One-Out cross-validation to generate multiple solutions to the above linear
 system to stabilize estimates of the eigenvalues.
 
-Let $C^{(k)} = {U^{(k)}}^T x_k x_k^T U^{(k)}$, $A^{(k)}$, and
-$\alpha^{(k)}$ be the relevant quantities computed when leaving out the $k$-th
+First we make the following definitions:
+\begin{gather*} 
+	\alpha^{(k)} = {U^{(k)}}^T\mathbbm{1}, \\ 
+	C^{(k)} = {U^{(k)}}^T x_k x_k^T U^{(k)}, \\
+	A^{(k)} = \mathrm{Diag}(\alpha^{(k)}_1, \ldots, \alpha^{(k)}_N),
+\end{gather*}
+where $\cdot^{(k)}$ denotes a quantity computed when leaving out the $k$-th
 observation, $x_k$.
 
 Then compute a set of intermediate values 
@@ -821,183 +768,240 @@ $$
 	\hat{d}^* = \mathrm{Isotonic}(\bar{d}).
 $$
 
-Variants could use a median computation instead of an averaging for computing
-$\bar{d}$.  This is likely to be a better option because evidence suggests the
-linear system produces widely ranging values.  Simple constraints like non-
-negativity could also be used.
 
-\item \emph{Vanilla $K$-Fold with Isotonic Regression}
+Variants of this method:
+\begin{itemize}
+	\item Use a median computation instead of an averaging for computing $\bar{d}$
+	
+	\item Non-negativity constraint for $z^{(k)}$, ie. solve the linear system
+	as a non-negative least squares problem.
+	
+	\item $L^2$ regularization on $z^{(k)}$.
+\end{itemize}
 
-A simple of the Leave-One-Out estimator, it uses $K$-Fold cross-validation
-instead.
 
-\item \emph{Joint Leave-One-Out with Isotonic Regression}
+\item \emph{MinVar $K$-Fold Cross-Validation with Isotonic Regression}
+
+A variant to the Leave-One-Out estimator using $K$-Fold cross-validation
+instead.  See Algorithm \ref{alg:minvar_kfold_cv} in the appendix.
+
+
+\item \emph{MinVar Leave-One-Out Joint Cross-Validation with Isotonic Regression}
+
+See Algorithm \ref{alg:minvar_loo_joint_cv} in the appendix for a detailed
+implementation.
 
 Averaging of the individual cross-validation values serves to denoise the raw
 values to produce better performance before applying Isotonic regression.  The
-solution $z$ could be obtained from solving the least squares problem,
-$$
+solution $z$ could be obtained from solving a larger least squares problem.
+
+With the definitions as the basic Leave-One-Out method,
+\begin{gather*} 
+	\alpha^{(k)} = {U^{(k)}}^T\mathbbm{1}, \\
+	C^{(k)} = {U^{(k)}}^T x_k x_k^T U^{(k)}, \\
+	A^{(k)} = \mathrm{Diag}(\alpha^{(k)}_1, \ldots, \alpha^{(k)}_N),
+\end{gather*}
+the least squares problem is defined as,
+\begin{equation}\label{eq:minvar_loo_lsq}
 	\begin{array}{ll}
 		\mbox{minimize} & \sum_{k=1}^T \| C^{(k)} A^{(k)} z - \alpha^{(k)} \|_2^2,
 	\end{array}
-$$
+\end{equation}
 so that $\bar{d}_i = \frac{1}{z_i}$.  The final estimator is obtained via
 Isotonic regression,
 $$
 	\hat{d}^* = \mathrm{Isotonic}(\bar{d}).
 $$
 
-\item \emph{Joint $K$-Fold with Isotonic Regression}
 
-Again, similar to the above but with $K$-Fold cross-validation instead.
-
-\item \emph{Nonlinear Leave-One-Out with Isotonic Regression}
-
-Instead of solving in the changed variables $z_i = \frac{1}{d_i}$, one can
-directly solve for $d_i = D_{ii}$ in,
-$$
-	\mathcal{R}(\hat{\Sigma}_N, \Sigma_N, \hat{w}_N)
-		= \left(
-				1 - \frac{\alpha^T D^{-1} U^T\Sigma_N U D^{-1} \alpha}
-								 {\alpha^T D^{-1} \alpha}
-			\right)^2.
-$$
-
-Of course, to make this a \emph{bona fide} estimator, we replace $U^T\Sigma_N U$
-and $\alpha$ by $C^{(k)}$ and $\alpha^{(k)}$, respectively, to create the
-objective function,
-$$
-	f(d; C, \alpha)
-		 = \left( 
-		 			1 - \frac{ \alpha^T D^{-1} C D^{-1} \alpha}{ \alpha^T D^{-1} \alpha }
-			\right)^2,
-$$
-where $D = \mathrm{Diag}(d)$.  With $f(d; C, \alpha)$, we can employ several
-different forms of estimator.
-
-This basic estimator is computed similarly to the vanilla version.  Let
-$d^{(k)}$ denote the solution to
-$$
-\begin{array}{ll}
-	\mbox{minimize}   & f(d; C^{(k)}, \alpha^{(k)})
-\end{array}
-$$
-where an optional non-negativity constraint $d \geq 0$ could be added.  Then
-compute the set of intermediate values,
-$$
-	\bar{d} = \frac1T \sum_{k=1}^T d^{(k)},
-$$
-and finally apply Isotonic regression to get,
-$$
-	\hat{d}^* = \mathrm{Isotonic}(\bar{d}).
-$$
-
-As with the vanilla estimator, a variant could use a median computation instead
-of an averaging for computing $\bar{d}$.
-
-\item \emph{Nonlinear $K$-Fold with Isotonic Regression}
-
-A similar estimator could be generated using $K$-fold cross-validation instead.
-
-\item \emph{Joint Nonlinear Leave-One-Out with Isotonic Regression}
-
-Optimal values $d$ could be obtained through joint minimization of $f(d;
-C^{(k)}, \alpha^{(k)})$ for $k=1, \ldots, T$.  Intermediate values are obtained
-from the optimization problem,
-$$
-\begin{array}{ll}
-	\mbox{minimize}   & \sum_{k=1}^T f(d; C^{(k)}, \alpha^{(k)}).
-\end{array}
-$$
-The final estimator is obtained after Isotonic regression,
-$$
-	\hat{d}^* = \mathrm{Isotonic}(\bar{d}).
-$$
-
-\item \emph{Joint Nonlinear $K$-Fold with Isotonic Regression}
-
-Replace Leave-One-Out cross-validation above with $K$-fold cross-validation.
-
-\item \emph{Joint Constrained Nonlinear Leave-One-Out}
-
-Isotonic regression serves to create monotonicity in the estimated eigenvalues.
-In the nonlinear optimization of $\sum_{k=1}^T f(d; C^{(k)}, \alpha^{(k)})$,
-monotonicity constraints could be directly applied in the optimization problem.
-Isotonic regression also seeks to preserve the trace of the estimated
-eigenvalues so an additional trace constraint can be added.
-
-For some target trace value $c$ and bounds $d_{\mbox{min}}$, $d_{\mbox{max}}$,
-optimal values are obtained from the optimization problem,
-$$
-\begin{array}{ll}
-	\mbox{minimize}   & \sum_{k=1}^T f(d; C^{(k)}, \alpha^{(k)}) \\
-	\mbox{subject to} & G d \preceq 0, \\
-										& \mathbbm{1}^T d = c,\\
-										& d_{\mbox{min}} \leq d \leq d_{\mbox{max}},
-\end{array}
-$$
-where $G \in \mathbb{R}^{(N-1)\times N}$ is a differencing matrix to ensure
-monotonicity.
-
-Variants could remove the trace constraint or either or both of the bounds.
-
-
-Practical considerations for solving the optimization problem:
-
-\begin{itemize}
-	\item Gradient: 
-
-	\begin{align*}
-	  \frac{\partial}{\partial d_i} f(d; C, \alpha)
-	    = 2\left( 
-	    	1 - \frac{ \alpha^T D^{-1} C D^{-1} \alpha }
-	    					 { \alpha^T D^{-1} \alpha }
-	    	\right)
-	    % \times \\
-	    	\left( 
-	       - \frac{-2\alpha_i}{d_i^2}
-	       	 \sum_{j=1}^N \frac{C_{ij}\alpha_j }{d_j}
-	         \frac{ 1 }{ \alpha^T D^{-1} \alpha}
-	      + \frac{ -\alpha_i^2 }{ d_i^2 }
-	        \frac{ \alpha^T D^{-1} C D^{-1} \alpha }{ (\alpha^T D^{-1} \alpha)^2}
-	    \right)
-	\end{align*}
-	
-	\item Change of Variables: $G$ adds $N-1$ linear inequality constraints to the 
-	problem.  Augmenting a final row in $G$ to preserve $d_N$ creates an
-	invertible transformation. Changing to differences gives:
-	\begin{gather*}
-		y = Gd, 
-		\quad g(y; C, \alpha) = f(G^{-1}y; C, \alpha), 
-		\quad \nabla_z g(y; C, \alpha) = G^{-T} \nabla_d f(G^{-1}y; C, \alpha),
-	\end{gather*}
-	The new optimization problem is,
-	$$
+The solution to \eqref{eq:minvar_loo_lsq} can also be expressed as the solution
+to a quadratic program given by,
+\begin{equation}\label{eq:minvar_loo_qp}
 	\begin{array}{ll}
-		\mbox{minimize}   & \sum_{k=1}^T g(y; C^{(k)}, \alpha^{(k)}) \\
-		\mbox{subject to} & y \geq [0, \ldots, 0, d_{\mbox{min}}]^T, \\
-											& v^T y = c,\\
-											& d_{\mbox{max}} - \mathbbm{1}^T y \geq 0,
+		\mbox{minimize} & (1/2) z^T P z + q^T z,
 	\end{array}
-	$$
-	where $v = G^{-T} \mathbbm{1}$ and creates the modified trace constraint, and
-	the final constraint represents the upper bound $d_1 \leq d_{\mbox{max}}$.
+\end{equation}
+where
+$$
+	P = \sum_{k=1}^T A^{(k)} {C^{(k)}}^T C^{(k)} A^{(k)},
+	\quad q = -\sum_{k=1}^T A^{(k)} {C^{(k)}}^T \alpha^{(k)},
+$$
+which reduces to solving the system $Pz = -q$.
 
-	In implementation, $G$, $G^{-1}$, and $G{-T}$ can be performed without
-	constructing matrices when inside the objective function or when transforming
-	the gradient.  As a constraint, general nonlinear optimization routines will
-	require $G$ in matrix form as a Jacobian of the constraint function.
 
-	\item Preconditioning: This is still an open issue but a further scaling is
-	possible such that $z = Py$ where $P$ is a diagonal matrix.
+Variants of this method:
+\begin{itemize}
+	\item Non-negativity constraint for $z^{(k)}$, ie. solve the least squares
+	problem instead as a non-negative least squares problem.
+	
+	\item Instead of using Isotonic Regression, the monotonicity constraint could
+	be directly applied when solving $z$.
+	
+	\item $L^2$ regularization on $z^{(k)}$.
 
+	\item Use a robust least squares computation (this is too advanced to consider
+	for now).
 \end{itemize}
 
-\item \emph{Joint Constrained Nonlinear $K$-Fold}
 
-Replace Leave-One-Out cross-validation above with $K$-fold cross-validation.
+
+
+\item \emph{MinVar $K$-Fold Joint Cross-Validation with Isotonic Regression}
+
+A variant to the Leave-One-Out Joint Cross-Validation estimator using $K$-Fold
+cross-validation instead.  See Algorithm \ref{alg:minvar_kfold_joint_cv} in the
+appendix.
 
 \end{enumerate}
+
+
+% \item \emph{Nonlinear Leave-One-Out with Isotonic Regression}
+
+% Instead of solving in the changed variables $z_i = \frac{1}{d_i}$, one can
+% directly solve for $d_i = D_{ii}$ in,
+% $$
+% 	\mathcal{R}(\hat{\Sigma}_N, \Sigma_N, \hat{w}_N)
+% 		= \left(
+% 				1 - \frac{\alpha^T D^{-1} U^T\Sigma_N U D^{-1} \alpha}
+% 								 {\alpha^T D^{-1} \alpha}
+% 			\right)^2.
+% $$
+
+% Of course, to make this a \emph{bona fide} estimator, we replace $U^T\Sigma_N U$
+% and $\alpha$ by $C^{(k)}$ and $\alpha^{(k)}$, respectively, to create the
+% objective function,
+% $$
+% 	f(d; C, \alpha)
+% 		 = \left( 
+% 		 			1 - \frac{ \alpha^T D^{-1} C D^{-1} \alpha}{ \alpha^T D^{-1} \alpha }
+% 			\right)^2,
+% $$
+% where $D = \mathrm{Diag}(d)$.  With $f(d; C, \alpha)$, we can employ several
+% different forms of estimator.
+
+% This basic estimator is computed similarly to the vanilla version.  Let
+% $d^{(k)}$ denote the solution to
+% $$
+% \begin{array}{ll}
+% 	\mbox{minimize}   & f(d; C^{(k)}, \alpha^{(k)})
+% \end{array}
+% $$
+% where an optional non-negativity constraint $d \geq 0$ could be added.  Then
+% compute the set of intermediate values,
+% $$
+% 	\bar{d} = \frac1T \sum_{k=1}^T d^{(k)},
+% $$
+% and finally apply Isotonic regression to get,
+% $$
+% 	\hat{d}^* = \mathrm{Isotonic}(\bar{d}).
+% $$
+
+% As with the vanilla estimator, a variant could use a median computation instead
+% of an averaging for computing $\bar{d}$.
+
+% \item \emph{Nonlinear $K$-Fold with Isotonic Regression}
+
+% A similar estimator could be generated using $K$-fold cross-validation instead.
+
+% \item \emph{Joint Nonlinear Leave-One-Out with Isotonic Regression}
+
+% Optimal values $d$ could be obtained through joint minimization of $f(d;
+% C^{(k)}, \alpha^{(k)})$ for $k=1, \ldots, T$.  Intermediate values are obtained
+% from the optimization problem,
+% $$
+% \begin{array}{ll}
+% 	\mbox{minimize}   & \sum_{k=1}^T f(d; C^{(k)}, \alpha^{(k)}).
+% \end{array}
+% $$
+% The final estimator is obtained after Isotonic regression,
+% $$
+% 	\hat{d}^* = \mathrm{Isotonic}(\bar{d}).
+% $$
+
+% \item \emph{Joint Nonlinear $K$-Fold with Isotonic Regression}
+
+% Replace Leave-One-Out cross-validation above with $K$-fold cross-validation.
+
+% \item \emph{Joint Constrained Nonlinear Leave-One-Out}
+
+% Isotonic regression serves to create monotonicity in the estimated eigenvalues.
+% In the nonlinear optimization of $\sum_{k=1}^T f(d; C^{(k)}, \alpha^{(k)})$,
+% monotonicity constraints could be directly applied in the optimization problem.
+% Isotonic regression also seeks to preserve the trace of the estimated
+% eigenvalues so an additional trace constraint can be added.
+
+% For some target trace value $c$ and bounds $d_{\mbox{min}}$, $d_{\mbox{max}}$,
+% optimal values are obtained from the optimization problem,
+% $$
+% \begin{array}{ll}
+% 	\mbox{minimize}   & \sum_{k=1}^T f(d; C^{(k)}, \alpha^{(k)}) \\
+% 	\mbox{subject to} & G d \preceq 0, \\
+% 										& \mathbbm{1}^T d = c,\\
+% 										& d_{\mbox{min}} \leq d \leq d_{\mbox{max}},
+% \end{array}
+% $$
+% where $G \in \mathbb{R}^{(N-1)\times N}$ is a differencing matrix to ensure
+% monotonicity.
+
+% Variants could remove the trace constraint or either or both of the bounds.
+
+
+% Practical considerations for solving the optimization problem:
+
+% \begin{itemize}
+% 	\item Gradient: 
+
+% 	\begin{align*}
+% 	  \frac{\partial}{\partial d_i} f(d; C, \alpha)
+% 	    = 2\left( 
+% 	    	1 - \frac{ \alpha^T D^{-1} C D^{-1} \alpha }
+% 	    					 { \alpha^T D^{-1} \alpha }
+% 	    	\right)
+% 	    % \times \\
+% 	    	\left( 
+% 	       - \frac{-2\alpha_i}{d_i^2}
+% 	       	 \sum_{j=1}^N \frac{C_{ij}\alpha_j }{d_j}
+% 	         \frac{ 1 }{ \alpha^T D^{-1} \alpha}
+% 	      + \frac{ -\alpha_i^2 }{ d_i^2 }
+% 	        \frac{ \alpha^T D^{-1} C D^{-1} \alpha }{ (\alpha^T D^{-1} \alpha)^2}
+% 	    \right)
+% 	\end{align*}
+	
+% 	\item Change of Variables: $G$ adds $N-1$ linear inequality constraints to the 
+% 	problem.  Augmenting a final row in $G$ to preserve $d_N$ creates an
+% 	invertible transformation. Changing to differences gives:
+% 	\begin{gather*}
+% 		y = Gd, 
+% 		\quad g(y; C, \alpha) = f(G^{-1}y; C, \alpha), 
+% 		\quad \nabla_z g(y; C, \alpha) = G^{-T} \nabla_d f(G^{-1}y; C, \alpha),
+% 	\end{gather*}
+% 	The new optimization problem is,
+% 	$$
+% 	\begin{array}{ll}
+% 		\mbox{minimize}   & \sum_{k=1}^T g(y; C^{(k)}, \alpha^{(k)}) \\
+% 		\mbox{subject to} & y \geq [0, \ldots, 0, d_{\mbox{min}}]^T, \\
+% 											& v^T y = c,\\
+% 											& d_{\mbox{max}} - \mathbbm{1}^T y \geq 0,
+% 	\end{array}
+% 	$$
+% 	where $v = G^{-T} \mathbbm{1}$ and creates the modified trace constraint, and
+% 	the final constraint represents the upper bound $d_1 \leq d_{\mbox{max}}$.
+
+% 	In implementation, $G$, $G^{-1}$, and $G{-T}$ can be performed without
+% 	constructing matrices when inside the objective function or when transforming
+% 	the gradient.  As a constraint, general nonlinear optimization routines will
+% 	require $G$ in matrix form as a Jacobian of the constraint function.
+
+% 	\item Preconditioning: This is still an open issue but a further scaling is
+% 	possible such that $z = Py$ where $P$ is a diagonal matrix.
+
+% \end{itemize}
+
+% \item \emph{Joint Constrained Nonlinear $K$-Fold}
+
+% Replace Leave-One-Out cross-validation above with $K$-fold cross-validation.
+
+% \end{enumerate}
 
 
 
@@ -1238,6 +1242,320 @@ Replace Leave-One-Out cross-validation above with $K$-fold cross-validation.
 % 		\caption{}
 % 		\label{fig:eigs}
 % 	\end{figure}
+
+\section{Appendix}
+
+\subsection{Algorithms}
+
+
+\begin{algorithm}
+	\caption{Leave-One-Out Cross Validation for Non-Linear Shrinkage}
+	\label{alg:nls_loo}
+	\begin{algorithmic}[1]
+	\Require $X = [x_1, \ldots, x_T]^T \in \mathbb{R}^{T\times N}$
+	\Require $\Sigma_N = \mathrm{Cov}(X)$
+	\Procedure{LOO-CV}{$X$}
+
+		\State $S \gets \frac1T X^T X$
+		\State 
+				$U \gets [u_1, \ldots, u_N] \in \mathbb{R}^{N\times N}$,
+				\quad $\Lambda \gets \mathrm{Diag}(\lambda_1, \ldots, \lambda_N)$,
+				\quad \mbox{s.t.}\quad $S = U \Lambda {U}^T$
+
+		\State $\tilde{d} \gets [0, \ldots, 0]^T \in \mathbb{R}^{N}$
+		\While{$k\le T$}
+			\State $X_{-k} \gets [x_1, \ldots, x_{k-1}, x_{k+1}, \ldots, x_T]^T$
+			\State $S^{(k)} \gets \frac{1}{T-1} X_{-k}^T X_{-k} $
+			\State 
+				$U^{(k)} \gets [u^{(k)}_1, \ldots, u^{(k)}_N] \in \mathbb{R}^{N\times N}$,
+				\quad $\Lambda^{(k)} 
+					\gets \mathrm{Diag}(\lambda^{(k)}_1, \ldots, \lambda^{(k)}_N)$,
+				\quad \mbox{s.t.}\quad $S^{(k)} = U^{(k)} \Lambda^{(k)} {U^{(k)}}^T$
+			\State $\tilde{d}_i \gets \tilde{d}_i 
+				+ \frac1T ({U^{(k)}}^T x_k)_i^2, \quad i = 1, \ldots, N$
+			\State $k \gets k+1$
+		\EndWhile
+
+		\State $\hat{\Sigma}_N \gets UDU^T, \quad 
+			\mbox{where}\quad D = \mathrm{Diag}(\tilde{d}_1, \ldots, \tilde{d}_N)$
+
+		\State \textbf{return} $\hat{\Sigma}_N$ 
+				\Comment{The LOO-CV non-linear shrinkage estimator for $\Sigma_N$.}
+	\EndProcedure
+	\end{algorithmic}
+\end{algorithm}
+
+
+\begin{algorithm}
+	\caption{$K$-Fold Cross Validation for Non-Linear Shrinkage}
+	\label{alg:nls_kcv}
+	\begin{algorithmic}[1]
+	\Require $X = [x_1, \ldots, x_T]^T \in \mathbb{R}^{T\times N}$
+	\Require $\Sigma_N = \mathrm{Cov}(X)$
+	\Require $K \in \mathbb{Z}, \quad K > 1$
+	\Procedure{$K$-Fold-CV}{$X$}
+
+		\State $S \gets \frac1T X^T X$
+		\State 
+				$U \gets [u_1, \ldots, u_N] \in \mathbb{R}^{N\times N}$,
+				\quad $\Lambda \gets \mathrm{Diag}(\lambda_1, \ldots, \lambda_N)$,
+				\quad \mbox{s.t.}\quad $S = U \Lambda {U}^T$
+
+		\State $m \gets T / K$
+		\State $\mathcal{K} \gets \{(1, \ldots m), \ldots, (T-m+1, \ldots, T)\}$
+
+		\State $\tilde{d} \gets [0, \ldots, 0]^T \in \mathbb{R}^{N}$
+		\State $k \gets 1$
+		\While{$k\le K$}
+			\State $X_{-k} \gets [x_{j_1}, \ldots, x_{j_{(T-m)}}]^T \in \mathbb{R}^{(T-m)\times N}, 
+				\quad j_i \notin \mathcal{K}_k$
+			\State $X_{k} \gets [x_{\ell_1}, \ldots, x_{\ell_m}]^T \in \mathbb{R}^{m\times N}, 
+				\quad \ell_i \in \mathcal{K}_k$
+			\State $S^{(k)} \gets \frac{1}{T-m} X_{-k}^T X_{-k} $
+
+			\State 
+				$U^{(k)} \gets [u^{(k)}_1, \ldots, u^{(k)}_N] \in \mathbb{R}^{N\times N}$,
+				\quad $\Lambda^{(k)} 
+					\gets \mathrm{Diag}(\lambda^{(k)}_1, \ldots, \lambda^{(k)}_N)$,
+				\quad \mbox{s.t.}\quad $S^{(k)} = U^{(k)} \Lambda^{(k)} {U^{(k)}}^T$
+
+
+			\State $\tilde{d}_i \gets \tilde{d}_i 
+				+ \frac1T {u^{(k)}_i}^T (\frac1m X_{k}^T X_{k}) u^{(k)}_i 
+				\quad i = 1, \ldots, N$
+			\State $k \gets k+1$
+		\EndWhile
+
+		\State $\hat{\Sigma}_N \gets UDU^T, \quad 
+			\mbox{where}\quad D = \mathrm{Diag}(\tilde{d}_1, \ldots, \tilde{d}_N)$
+
+		\State \textbf{return} $\hat{\Sigma}_N$ 
+				\Comment{The $K$-Fold-CV non-linear shrinkage estimator for $\Sigma_N$.}
+	\EndProcedure
+	\end{algorithmic}
+\end{algorithm}
+
+
+\begin{algorithm}
+	\caption{MinVar Leave-One-Out Cross-Validation with Isotonic Regression}
+	\label{alg:minvar_loo_cv}
+	\begin{algorithmic}[1]
+	\Require $X = [x_1, \ldots, x_T]^T \in \mathbb{R}^{T\times N}$
+	\Require $\Sigma_N = \mathrm{Cov}(X)$
+	\Procedure{MinVar-LOO-CV}{$X$}
+
+		\State $S \gets \frac1T X^T X$
+		\State 
+				$U \gets [u_1, \ldots, u_N] \in \mathbb{R}^{N\times N}$,
+				\quad $\Lambda \gets \mathrm{Diag}(\lambda_1, \ldots, \lambda_N)$,
+				\quad \mbox{s.t.}\quad $S = U \Lambda {U}^T$
+
+		\State $\bar{d} \gets [0, \ldots, 0]^T \in \mathbb{R}^{N}$
+		\While{$k\le T$}
+			\State $X_{-k} \gets [x_1, \ldots, x_{k-1}, x_{k+1}, \ldots, x_T]^T$
+			\State $S^{(k)} \gets \frac{1}{T-1} X_{-k}^T X_{-k} $
+			\State 
+				$U^{(k)} \gets [u^{(k)}_1, \ldots, u^{(k)}_N] \in \mathbb{R}^{N\times N}$,
+				\quad $\Lambda^{(k)} 
+					\gets \mathrm{Diag}(\lambda^{(k)}_1, \ldots, \lambda^{(k)}_N)$,
+				\quad \mbox{s.t.}\quad $S^{(k)} = U^{(k)} \Lambda^{(k)} {U^{(k)}}^T$
+
+			\State $\alpha^{(k)} \gets {U^{(k)}}^T\mathbbm{1}$
+			\State $C^{(k)} \gets {U^{(k)}}^T x_k x_k^T U^{(k)}$
+			\State $A^{(k)} \gets \mathrm{Diag}(\alpha^{(k)}_1, \ldots, \alpha^{(k)}_N)$
+
+
+			\State $\bar{d}_i \gets \bar{d}_i 
+				+ \frac1T \frac{1}{z^{(k)}_i}, \quad i = 1, \ldots, N, 
+					\quad C^{(k)} A^{(k)} z^{(k)} = \alpha^{(k)}.$
+			\State $k \gets k+1$
+		\EndWhile
+
+		\State $\hat{d}^* \gets \mathrm{Isotonic}(\bar{d}).$ 
+			\Comment{Isotonic Regression applied to $\bar{d}$}
+
+		\State $\hat{\Sigma}_N \gets UDU^T, \quad 
+			\mbox{where}\quad D = \mathrm{Diag}(\hat{d}^*_1, \ldots, \hat{d}^*_N)$
+
+		\State \textbf{return} $\hat{\Sigma}_N$ 
+				\Comment{The MinVar LOO-CV non-linear shrinkage estimator for
+				$\Sigma_N$.}
+	\EndProcedure
+	\end{algorithmic}
+\end{algorithm}
+
+
+\begin{algorithm}
+	\caption{MinVar $K$-Fold Cross-Validation with Isotonic Regression}
+	\label{alg:minvar_kfold_cv}
+	\begin{algorithmic}[1]
+	\Require $X = [x_1, \ldots, x_T]^T \in \mathbb{R}^{T\times N}$
+	\Require $\Sigma_N = \mathrm{Cov}(X)$
+	\Require $K \in \mathbb{Z}, \quad K > 1$
+	\Procedure{MinVar-$K$-Fold-CV}{$X$}
+
+		\State $S \gets \frac1T X^T X$
+		\State 
+				$U \gets [u_1, \ldots, u_N] \in \mathbb{R}^{N\times N}$,
+				\quad $\Lambda \gets \mathrm{Diag}(\lambda_1, \ldots, \lambda_N)$,
+				\quad \mbox{s.t.}\quad $S = U \Lambda {U}^T$
+
+		\State $m \gets T / K$
+		\State $\mathcal{K} \gets \{(1, \ldots m), \ldots, (T-m+1, \ldots, T)\}$
+
+		\State $\bar{d} \gets [0, \ldots, 0]^T \in \mathbb{R}^{N}$
+		\State $k \gets 1$
+		\While{$k\le K$}
+			\State $X_{-k} \gets [x_{j_1}, \ldots, x_{j_{(T-m)}}]^T \in \mathbb{R}^{(T-m)\times N}, 
+				\quad j_i \notin \mathcal{K}_k$
+			\State $X_{k} \gets [x_{\ell_1}, \ldots, x_{\ell_m}]^T \in \mathbb{R}^{m\times N}, 
+				\quad \ell_i \in \mathcal{K}_k$
+			\State $S^{(k)} \gets \frac{1}{T-m} X_{-k}^T X_{-k} $
+
+			\State 
+				$U^{(k)} \gets [u^{(k)}_1, \ldots, u^{(k)}_N] \in \mathbb{R}^{N\times N}$,
+				\quad $\Lambda^{(k)} 
+					\gets \mathrm{Diag}(\lambda^{(k)}_1, \ldots, \lambda^{(k)}_N)$,
+				\quad \mbox{s.t.}\quad $S^{(k)} = U^{(k)} \Lambda^{(k)} {U^{(k)}}^T$
+
+			\State $\alpha^{(k)} \gets {U^{(k)}}^T\mathbbm{1}$
+			\State $C^{(k)} \gets {U^{(k)}}^T (\frac1m X_{k}^T X_{k}) U^{(k)}$
+			\State $A^{(k)} \gets \mathrm{Diag}(\alpha^{(k)}_1, \ldots, \alpha^{(k)}_N)$
+
+
+			\State $\bar{d}_i \gets \bar{d}_i 
+				+ \frac1K \frac{1}{z^{(k)}_i}, \quad i = 1, \ldots, N, 
+					\quad C^{(k)} A^{(k)} z^{(k)} = \alpha^{(k)}.$
+			\State $k \gets k+1$
+
+		\EndWhile
+
+		\State $\hat{d}^* \gets \mathrm{Isotonic}(\bar{d}).$ 
+			\Comment{Isotonic Regression applied to $\bar{d}$}
+
+		\State $\hat{\Sigma}_N \gets UDU^T, \quad 
+			\mbox{where}\quad D = \mathrm{Diag}(\hat{d}^*_1, \ldots, \hat{d}^*_N)$
+
+		\State \textbf{return} $\hat{\Sigma}_N$ 
+				\Comment{The MinVar $K$-Fold-CV non-linear shrinkage estimator for
+				$\Sigma_N$.}
+	\EndProcedure
+	\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+	\caption{MinVar Leave-One-Out Joint Cross-Validation with Isotonic Regression}
+	\label{alg:minvar_loo_joint_cv}
+	\begin{algorithmic}[1]
+	\Require $X = [x_1, \ldots, x_T]^T \in \mathbb{R}^{T\times N}$
+	\Require $\Sigma_N = \mathrm{Cov}(X)$
+	\Procedure{MinVar-LOO-Joint-CV}{$X$}
+
+		\State $S \gets \frac1T X^T X$
+		\State 
+				$U \gets [u_1, \ldots, u_N] \in \mathbb{R}^{N\times N}$,
+				\quad $\Lambda \gets \mathrm{Diag}(\lambda_1, \ldots, \lambda_N)$,
+				\quad \mbox{s.t.}\quad $S = U \Lambda {U}^T$
+
+		% \State $\bar{d} \gets [0, \ldots, 0]^T \in \mathbb{R}^{N}$
+		\State $P \gets 0 \in \mathbb{R}^{N \times N}$
+		\State $q \gets 0 \in \mathbb{R}^{N}$
+
+		\While{$k\le T$}
+			\State $X_{-k} \gets [x_1, \ldots, x_{k-1}, x_{k+1}, \ldots, x_T]^T$
+			\State $S^{(k)} \gets \frac{1}{T-1} X_{-k}^T X_{-k} $
+			\State 
+				$U^{(k)} \gets [u^{(k)}_1, \ldots, u^{(k)}_N] \in \mathbb{R}^{N\times N}$,
+				\quad $\Lambda^{(k)} 
+					\gets \mathrm{Diag}(\lambda^{(k)}_1, \ldots, \lambda^{(k)}_N)$,
+				\quad \mbox{s.t.}\quad $S^{(k)} = U^{(k)} \Lambda^{(k)} {U^{(k)}}^T$
+
+			\State $\alpha^{(k)} \gets {U^{(k)}}^T\mathbbm{1}$
+			\State $C^{(k)} \gets {U^{(k)}}^T x_k x_k^T U^{(k)}$
+			\State $A^{(k)} \gets \mathrm{Diag}(\alpha^{(k)}_1, \ldots, \alpha^{(k)}_N)$
+
+			\State $P \gets P +  A^{(k)} {C^{(k)}}^T C^{(k)} A^{(k)}$
+			\State $q \gets q + A^{(k)} {C^{(k)}}^T \alpha^{(k)}$
+
+			\State $k \gets k+1$
+		\EndWhile
+
+		\State $\bar{d}_i \gets \frac{1}{z_i}, \quad \mbox{s.t.} \quad Pz = -q$
+
+		\State $\hat{d}^* \gets \mathrm{Isotonic}(\bar{d}).$ 
+			\Comment{Isotonic Regression applied to $\bar{d}$}
+
+		\State $\hat{\Sigma}_N \gets UDU^T, \quad 
+			\mbox{where}\quad D = \mathrm{Diag}(\hat{d}^*_1, \ldots, \hat{d}^*_N)$
+
+		\State \textbf{return} $\hat{\Sigma}_N$ 
+				\Comment{The MinVar LOO-Joint-CV non-linear shrinkage estimator for
+				$\Sigma_N$.}
+	\EndProcedure
+	\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+	\caption{MinVar $K$-Fold Joint Cross-Validation with Isotonic Regression}
+	\label{alg:minvar_kfold_joint_cv}
+	\begin{algorithmic}[1]
+	\Require $X = [x_1, \ldots, x_T]^T \in \mathbb{R}^{T\times N}$
+	\Require $\Sigma_N = \mathrm{Cov}(X)$
+	\Require $K \in \mathbb{Z}, \quad K > 1$
+	\Procedure{MinVar-$K$-Fold-CV}{$X$}
+
+		\State $S \gets \frac1T X^T X$
+		\State 
+				$U \gets [u_1, \ldots, u_N] \in \mathbb{R}^{N\times N}$,
+				\quad $\Lambda \gets \mathrm{Diag}(\lambda_1, \ldots, \lambda_N)$,
+				\quad \mbox{s.t.}\quad $S = U \Lambda {U}^T$
+
+		\State $m \gets T / K$
+		\State $\mathcal{K} \gets \{(1, \ldots m), \ldots, (T-m+1, \ldots, T)\}$
+
+		\State $P \gets 0 \in \mathbb{R}^{N \times N}$
+		\State $q \gets 0 \in \mathbb{R}^{N}$
+		\State $k \gets 1$
+
+		\While{$k\le K$}
+			\State $X_{-k} \gets [x_{j_1}, \ldots, x_{j_{(T-m)}}]^T \in \mathbb{R}^{(T-m)\times N}, 
+				\quad j_i \notin \mathcal{K}_k$
+			\State $X_{k} \gets [x_{\ell_1}, \ldots, x_{\ell_m}]^T \in \mathbb{R}^{m\times N}, 
+				\quad \ell_i \in \mathcal{K}_k$
+			\State $S^{(k)} \gets \frac{1}{T-m} X_{-k}^T X_{-k} $
+
+			\State 
+				$U^{(k)} \gets [u^{(k)}_1, \ldots, u^{(k)}_N] \in \mathbb{R}^{N\times N}$,
+				\quad $\Lambda^{(k)} 
+					\gets \mathrm{Diag}(\lambda^{(k)}_1, \ldots, \lambda^{(k)}_N)$,
+				\quad \mbox{s.t.}\quad $S^{(k)} = U^{(k)} \Lambda^{(k)} {U^{(k)}}^T$
+
+			\State $\alpha^{(k)} \gets {U^{(k)}}^T\mathbbm{1}$
+			\State $C^{(k)} \gets {U^{(k)}}^T (\frac1m X_{k}^T X_{k}) U^{(k)}$
+			\State $A^{(k)} \gets \mathrm{Diag}(\alpha^{(k)}_1, \ldots, \alpha^{(k)}_N)$
+
+			\State $P \gets P +  A^{(k)} {C^{(k)}}^T C^{(k)} A^{(k)}$
+			\State $q \gets q + A^{(k)} {C^{(k)}}^T \alpha^{(k)}$
+
+			\State $k \gets k+1$
+
+		\EndWhile
+
+		\State $\bar{d}_i \gets \frac{1}{z_i}, \quad \mbox{s.t.} \quad Pz = -q$
+
+		\State $\hat{d}^* \gets \mathrm{Isotonic}(\bar{d}).$ 
+			\Comment{Isotonic Regression applied to $\bar{d}$}
+
+		\State $\hat{\Sigma}_N \gets UDU^T, \quad 
+			\mbox{where}\quad D = \mathrm{Diag}(\hat{d}^*_1, \ldots, \hat{d}^*_N)$
+
+		\State \textbf{return} $\hat{\Sigma}_N$ 
+				\Comment{The MinVar $K$-Fold-Joint-CV non-linear shrinkage estimator for
+				$\Sigma_N$.}
+	\EndProcedure
+	\end{algorithmic}
+\end{algorithm}
+
 
 \bibliographystyle{apalike}
 \bibliography{Remote}

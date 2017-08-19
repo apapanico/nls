@@ -12,7 +12,8 @@ def isotonic_regression(y, y_min=None, y_max=None):
     """Wrapper around SKlearn's isotonic regression"""
     return sk_isotonic_regression(y, y_min=y_min, y_max=y_max, increasing=False)
 
-def sample(Sigma, T,seed=None):
+
+def sample(Sigma, T, seed=None):
     """Sample from multivariate normal distribtion"""
     rng = np.random.RandomState(seed)
     N = Sigma.shape[0]
@@ -93,7 +94,7 @@ def portfolio_analysis(S, Sigma, gamma, pi_true):
 
 
 ### >>>>>>>>>>>> ####
- 
+
 def nan_helper(y):
     """Helper to handle indices and logical indices of NaNs.
        NaNs might be repalced with any other values desired. Just change 
@@ -112,31 +113,34 @@ def nan_helper(y):
     """
     return np.isnan(y), lambda z: z.nonzero()[0]
 
+
 def inf_helper(y):
     return np.isinf(y), lambda z: z.nonzero()[0]
 
+
 def zeros_helper(y):
-    return y==0, lambda z: z.nonzero()[0]
+    return y == 0, lambda z: z.nonzero()[0]
+
 
 def interpolate_inf(y):
-    infs, x= inf_helper(y)
+    infs, x = inf_helper(y)
     y[infs] = np.interp(x(infs), x(~infs), y[~infs])
     return
 
+
 def interpolate_zeros(y):
-    zeros, x= zeros_helper(y)
+    zeros, x = zeros_helper(y)
     y[zeros] = np.interp(x(zeros), x(~zeros), y[~zeros])
     return
-    
-def abs_dif(x,y):
-    return sum(np.absolute(x-y))
-    
+
+
+def abs_dif(x, y):
+    return sum(np.absolute(x - y))
+
+
 def read_inquiry(inq):
     # inq = inquiry of the form (estimator,T,N)
-    return inq[0]+'_T='+str(inq[1])+'_N='+str(inq[2])
+    return inq[0] + '_T=' + str(inq[1]) + '_N=' + str(inq[2])
 #@def
 
-
  ### <<<<<<<<<<<<<< ####
- 
-
