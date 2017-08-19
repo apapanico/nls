@@ -777,6 +777,8 @@ Variants of this method:
 	as a non-negative least squares problem.
 	
 	\item $L^2$ regularization on $z^{(k)}$.
+	
+	\item Use a ``better'' out-of-sample estimator than $x_k x_k^T$.
 \end{itemize}
 
 
@@ -785,6 +787,7 @@ Variants of this method:
 A variant to the Leave-One-Out estimator using $K$-Fold cross-validation
 instead.  See Algorithm \ref{alg:minvar_kfold_cv} in the appendix.
 
+The same method variants also apply to this $K$-fold version.
 
 \item \emph{MinVar Leave-One-Out Joint Cross-Validation with Isotonic Regression}
 
@@ -841,6 +844,9 @@ Variants of this method:
 
 	\item Use a robust least squares computation (this is too advanced to consider
 	for now).
+	
+	\item Use a ``better'' out-of-sample estimator than $x_k x_k^T$.
+
 \end{itemize}
 
 
@@ -851,6 +857,8 @@ Variants of this method:
 A variant to the Leave-One-Out Joint Cross-Validation estimator using $K$-Fold
 cross-validation instead.  See Algorithm \ref{alg:minvar_kfold_joint_cv} in the
 appendix.
+
+The same method variants also apply to this $K$-fold version.
 
 \end{enumerate}
 
