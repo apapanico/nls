@@ -22,6 +22,7 @@ STRING_SEQ = StringSeqParamType()
 
 from plotting import line_plot_eigs,box_plot_eigs
 from nls_minvar import * 
+from nls_minvar_new import * 
 from nls_lw import *
 from utils import *
 
@@ -40,7 +41,9 @@ estimators_functions = {'nls_oracle':nls_oracle,'nls_asymptotic':nls_asymptotic,
                         'minvar_nls_kfold_oracle': minvar_nls_kfold_oracle,
                         'minvar_nls_kfold': minvar_nls_kfold,
                         'minvar_nls_oracle_reg':minvar_nls_oracle_reg,
-                        'minvar_nls_kfold_reg':minvar_nls_kfold_reg}
+                        'minvar_nls_kfold_reg':minvar_nls_kfold_reg,
+                        'minvar_nls':minvar_nls,
+                        'minvar_joint_kfold_isotonic':minvar_joint_kfold_isotonic}
 
 
 @click.group()
@@ -85,7 +88,7 @@ def simulate_eigs(simulations=5,N=10,T=100,seed=1,estimators=['sample'],cov_mode
                 if 'kfold' in est:
                     kwargs['K'] =10
                 if 'reg' in est:
-                    kwargs['lmbda'] = 0.000005
+                    kwargs['lmbda'] = 0#0.000005
 
                 eigenvalues[est +'_'+'T='+str(T)+'_'+ 'N='+str(N)].append(estimators_functions[est](SimObj,**kwargs))
             #@if
@@ -125,7 +128,7 @@ def eig_bias(n,t,cov_model,estimators,simulations,seed,qtile,save):
     else:
         box_plot_eigs(simResult,simulations=simulations,estimators=estimators,qtile=qtile,T=t,N=n,save=save)  
 
-
+        
 
 @cli.command()
 @click.option('--N', type=int, default=100)
