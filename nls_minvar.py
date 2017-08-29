@@ -1,13 +1,9 @@
-
 from tqdm import tqdm
 import numpy as np
 
-from utils import eig, isotonic_regression,interpolate_zeros
+from utils import eig, isotonic_regression,cov,interpolate_zeros,lsq_regularized,nnlsq_regularized
 from nls_lw import nls_kfold
-from nls_minvar_old import lsq_regularized,nnlsq_regularized
-
 from scipy.optimize import lsq_linear
-
 
 def minvar_vanilla_loo_isotonic(sim, smoothing='average', nonnegative=False,
                                 regularization=None):
@@ -81,7 +77,7 @@ def minvar_joint_kfold_isotonic(sim, K, smoothing='average', nonnegative=False,
         k_set = list(range(k * m, (k + 1) * m))
         _k = np.delete(range(T),k_set)
         X_k = X[k_set, :]
-        S_k =  1/(T-m) * X[_k,:].T @ X[_k,:] # (T * S - X_k.T @ X_k) / (T - m) 
+        S_k =  (T * S - X_k.T @ X_k) / (T - m) # 1/(T-m) * X[_k,:].T @ X[_k,:]
         _, U_k = eig(S_k)
         alpha_k = U_k.T @ np.ones(N)
         C_k =  U_k.T @ (1/m * X_k.T @ X_k) @ U_k
