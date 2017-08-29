@@ -7,10 +7,9 @@ import numpy as np
 # import cvxopt as opt
 # import cvxopt.solvers as optsolvers
 
-from utils import eig, isotonic_regression,cov,interpolate_zeros
+from utils import eig, isotonic_regression,cov,interpolate_zeros,lsq_regularized,nnlsq_regularized
 from nls_lw import nls_kfold
 import scipy as scipy
-
 
 
 def minvar_nls_oracle(sim,isotonic=False, trace=False,
@@ -142,7 +141,7 @@ def minvar_nls_oracle_reg(sim,lmbda):
     
     d = 1/z
     return d
-    
+   
     
 def minvar_nls_kfold_reg(sim,lmbda,K):
     """Bona fide eigenvalues for new MinVar nonlinear shrinkage with 
@@ -154,8 +153,8 @@ def minvar_nls_kfold_reg(sim,lmbda,K):
     
     T, N = sim.shape
     U = sim.U
-    d = nls_kfold(sim,K,isotonic=True)
-    Sigma_est = U @ np.diag(d) @ U.T
+    d = nls_kfold(sim,K,isotonic=True) # with isotonic variance falls
+    Sigma_est = sim.S#U @ np.diag(d) @ U.T
     alpha = U.T.dot(np.ones(N))
     C = U.T.dot( Sigma_est).dot(U)
     z = nnlsq_regularized(C @ np.diag(alpha), alpha, lmbda)
@@ -167,6 +166,16 @@ def minvar_nls_kfold_reg(sim,lmbda,K):
     d = 1/z
     return d
     
+    
+def minvar_nls(sim):
+    T, N = sim.shape
+    U = sim.U
+    d = nls_kfold(sim,K=10,isotonic=True) # with isotonic variance falls
+    Sigma_est = U @ np.diag(d) @ U.T
+    alpha = U.T.dot(np.ones(N))
+    C = U.T.dot( Sigma_est).dot(U)
+    z=np.linalg.inv(np.diag(alpha)) @ np.linalg.inv(C) @alpha
+    return 1/z
 ''' 
 
 Doesn`t work with nnlsq_regularize (produce infinite values) and works bad with 
@@ -197,23 +206,7 @@ def minvar_nls_kfold_reg(sim,lmbda,K):
 
     return d
 '''
-
-def lsq_regularized(A,b,lmbda):
-    N = len(b)
-    G = np.identity(N) * lmbda
-    x = np.linalg.inv(A.T @ A + G.T @ G)  @ A.T @ b
-    return x
-
-def nnlsq_regularized(A,b,lmbda):
-    ''' Non-negative least squares with regularization'''
-    N = len(b)
-    G = np.identity(N) * lmbda
-    W = np.concatenate((A,G),axis=0)
-    f = np.concatenate((b,np.zeros(N)),axis=0)
-    
-    x = scipy.optimize.nnls(W,f)[0]
-    
-    return x
+        
 
 def minvar_nls_kfold(sim,K, progress=False, trace=False,
                      upper_bound=True):
@@ -245,6 +238,7 @@ def minvar_nls_kfold(sim,K, progress=False, trace=False,
         if progress:
             pbar.update()
 
+    
     d_min, d_max = lam[-1], lam[0]
     d_kfold = nls_kfold(sim,K)
     d_isokfold = isotonic_regression(d_kfold)
