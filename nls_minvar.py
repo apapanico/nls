@@ -4,7 +4,7 @@ import numpy as np
 
 from utils import eig, isotonic_regression,interpolate_zeros
 from nls_lw import nls_kfold
-from nls_minvar import lsq_regularized,nnlsq_regularized
+from nls_minvar_old import lsq_regularized,nnlsq_regularized
 
 from scipy.optimize import lsq_linear
 
