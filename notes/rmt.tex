@@ -736,13 +736,17 @@ serve as \emph{bona fide} estimators.
 
 \begin{enumerate}
 
-\item \emph{MinVar Leave-One-Out Cross-Validation with Isotonic Regression}
+\item \emph{MinVar Leave-One-Out/$K$-Fold Cross-Validation with Isotonic
+Regression}
 
-See Algorithm \ref{alg:minvar_loo_cv} in the appendix for more detailed implementation.
+See Algorithm \ref{alg:minvar_loo_cv} in the appendix for more detailed
+implementation.  See Algorithm \ref{alg:minvar_kfold_cv} for the $K$-Fold
+variant.
 
-The first proposed estimator is a simple cross-validation estimator using Leave-
-One-Out cross-validation to generate multiple solutions to the above linear
-system to stabilize estimates of the eigenvalues.
+The first proposed estimator is a simple cross-validation estimator using either
+Leave- One-Out or $K$-Fold cross-validation to generate multiple solutions to
+the above linear system to stabilize estimates of the eigenvalues.  The
+difference between the LOO and $K$-Fold versions is rather trivial.
 
 First we make the following definitions:
 \begin{gather*} 
@@ -771,34 +775,85 @@ $$
 
 Variants of this method:
 \begin{itemize}
-	\item Use a median computation instead of an averaging for computing $\bar{d}$
-	
+	\item Use a median computation instead of an averaging for computing
+	$\bar{d}$:
+	$$
+		\bar{d}_i = \mathrm{Median}\left(
+				\frac{1}{z_i^{(1)}}, \ldots, \frac{1}{z_i^{(K)}}\right)
+	$$	
 	\item Non-negativity constraint for $z^{(k)}$, ie. solve the linear system
-	as a non-negative least squares problem.
+	as a non-negative least squares problem:
+	\begin{equation*}
+	  \begin{aligned}
+	    & \underset{z}{\text{minimize}}
+	    & & \| C^{(k)} A^{(k)} z - \alpha^{(k)} \|_2^2, \\
+	    & \text{subject to}
+	    & & z \geq 0,
+	  \end{aligned}
+	\end{equation*}
+
+	\item Monotonicity constraint for $z^{(k)}$, ie. solve the constrained least
+	squares problem:
+	\begin{equation*}
+	  \begin{aligned}
+	    & \underset{z}{\text{minimize}}
+	    & & \| C^{(k)} A^{(k)} z - \alpha^{(k)} \|_2^2, \\
+	    & \text{subject to}
+	    & & Gz \geq 0,
+	  \end{aligned}
+	\end{equation*}
+	where $G\in \mathbb{R}^{(N-1)\times N}$ is the monotonicity contraint such
+	that $G_{ii} = 1$ and $G_{i,(i+1)} = -1$ and 0 otherwise.  An extra row can be
+	added to impose non-negativity by requiring $z_N \geq 0$.
+
+	\item $L^2$ regularization on $z^{(k)}$:
+	\begin{equation*}
+	  \begin{aligned}
+	    & \underset{z}{\text{minimize}}
+	    & & \| C^{(k)} A^{(k)} z - \alpha^{(k)} \|_2^2 + \gamma \|z\|_2^2,
+	  \end{aligned}
+	\end{equation*}
+
+	\item Use a robust least squares computation:
+	\begin{equation*}
+	  \begin{aligned}
+	    & \underset{z}{\text{minimize}} 
+	    & & \phi(C^{(k)} A^{(k)} z - \alpha^{(k)}),
+	  \end{aligned}
+	\end{equation*}
+	where $\phi$ is a convex loss function inducing robustness.  An example is the
+	Huber loss,
+	$$
+		\phi(x; \tau) = \begin{cases}
+			\frac12 x^2 & |x| \leq \tau,\\
+			\tau(|x| - \frac12\tau) & \mbox{otherwise}.
+		\end{cases}
+	$$
 	
-	\item $L^2$ regularization on $z^{(k)}$.
-	
-	\item Use a ``better'' out-of-sample estimator than $x_k x_k^T$.
+	\item Use a ``better'' out-of-sample estimator than $x_k x_k^T$:
+	$$
+		C^{(k)} = {U^{(k)}}^T S_k U^{(k)},
+	$$
+	where $S_k$ is some covariance estimator replacement for $x_k x_k^T$.
+
+
 \end{itemize}
 
-
-\item \emph{MinVar $K$-Fold Cross-Validation with Isotonic Regression}
-
-A variant to the Leave-One-Out estimator using $K$-Fold cross-validation
-instead.  See Algorithm \ref{alg:minvar_kfold_cv} in the appendix.
-
-The same method variants also apply to this $K$-fold version.
-
-\item \emph{MinVar Leave-One-Out Joint Cross-Validation with Isotonic Regression}
+\item \emph{MinVar Leave-One-Out/$K$-Fold Joint Cross-Validation with Isotonic
+Regression}
 
 See Algorithm \ref{alg:minvar_loo_joint_cv} in the appendix for a detailed
-implementation.
+implementation.  See Algorithm \ref{alg:minvar_kfold_joint_cv} in the
+appendix for the $K$-Fold variant.
+
+As before, the difference between the LOO and $K$-Fold versions is rather
+trivial.
 
 Averaging of the individual cross-validation values serves to denoise the raw
 values to produce better performance before applying Isotonic regression.  The
 solution $z$ could be obtained from solving a larger least squares problem.
 
-With the definitions as the basic Leave-One-Out method,
+With the definitions as the first method,
 \begin{gather*} 
 	\alpha^{(k)} = {U^{(k)}}^T\mathbbm{1}, \\
 	C^{(k)} = {U^{(k)}}^T x_k x_k^T U^{(k)}, \\
@@ -810,55 +865,79 @@ the least squares problem is defined as,
 		\mbox{minimize} & \sum_{k=1}^T \| C^{(k)} A^{(k)} z - \alpha^{(k)} \|_2^2,
 	\end{array}
 \end{equation}
-so that $\bar{d}_i = \frac{1}{z_i}$.  The final estimator is obtained via
-Isotonic regression,
+or in more compact form,
+\begin{equation*}
+	\begin{array}{ll}
+		\mbox{minimize} & \| \bar{C} z - \bar{\alpha} \|_2^2,
+	\end{array}
+\end{equation*}
+where,
+$$
+  \bar{C}
+    = \begin{bmatrix} C^{(1)} A^{(1)} \\ \vdots \\ C^{(K)} A^{(K)}\end{bmatrix},
+  \quad \bar{\alpha}
+    = \begin{bmatrix} \alpha^{(1)} \\ \vdots \\ \alpha^{(K)}\end{bmatrix}.
+$$
+
+The intermediate estimator is $\bar{d}_i = \frac{1}{z_i}$ and the final
+estimator is obtained via Isotonic regression,
 $$
 	\hat{d}^* = \mathrm{Isotonic}(\bar{d}).
 $$
 
-
-The solution to \eqref{eq:minvar_loo_lsq} can also be expressed as the solution
-to a quadratic program given by,
-\begin{equation}\label{eq:minvar_loo_qp}
-	\begin{array}{ll}
-		\mbox{minimize} & (1/2) z^T P z + q^T z,
-	\end{array}
-\end{equation}
-where
-$$
-	P = \sum_{k=1}^T A^{(k)} {C^{(k)}}^T C^{(k)} A^{(k)},
-	\quad q = -\sum_{k=1}^T A^{(k)} {C^{(k)}}^T \alpha^{(k)},
-$$
-which reduces to solving the system $Pz = -q$.
-
-
 Variants of this method:
 \begin{itemize}
-	\item Non-negativity constraint for $z^{(k)}$, ie. solve the least squares
-	problem instead as a non-negative least squares problem.
+	\item Non-negativity constraint for $z^{(k)}$, ie. solve the non-negative
+	least squares problem:
+	\begin{equation*}
+	  \begin{aligned}
+	    & \underset{z}{\text{minimize}}
+	    & & \| \bar{C} z - \bar{\alpha} \|_2^2, \\
+	    & \text{subject to}
+	    & & z \geq 0,
+	  \end{aligned}
+	\end{equation*}
 	
-	\item Instead of using Isotonic Regression, the monotonicity constraint could
-	be directly applied when solving $z$.
+	\item Instead of using Isotonic Regression, apply a monotonicity constraint
+	directly when solving $z$:
+	\begin{equation*}
+	  \begin{aligned}
+	    & \underset{z}{\text{minimize}}
+	    & & \| \bar{C} z - \bar{\alpha} \|_2^2, \\
+	    & \text{subject to}
+	    & & Gz \geq 0,
+	  \end{aligned}
+	\end{equation*}
 	
-	\item $L^2$ regularization on $z^{(k)}$.
+	
+	\item $L^2$ regularization on $z^{(k)}$:
+	\begin{equation*}
+	  \begin{aligned}
+	    & \underset{z}{\text{minimize}} 
+	    & & \| \bar{C} z - \bar{\alpha} \|_2^2 + \gamma \|z\|_2^2,
+	  \end{aligned}
+	\end{equation*}
 
-	\item Use a robust least squares computation (this is too advanced to consider
-	for now).
+	\item Use a robust least squares computation:
+	\begin{equation*}
+	  \begin{aligned}
+	    & \underset{z}{\text{minimize}} 
+	    & & \phi(\bar{C} z - \bar{\alpha}),
+	  \end{aligned}
+	\end{equation*}
+	where $\phi$ is a convex loss function inducing robustness.  An example is the
+	Huber loss,
+	$$
+		\phi(x; \tau) = \begin{cases}
+			\frac12 x^2 & |x| \leq \tau,\\
+			\tau(|x| - \frac12\tau) & \mbox{otherwise}.
+		\end{cases}
+	$$
 	
 	\item Use a ``better'' out-of-sample estimator than $x_k x_k^T$.
 
 \end{itemize}
 
-
-
-
-\item \emph{MinVar $K$-Fold Joint Cross-Validation with Isotonic Regression}
-
-A variant to the Leave-One-Out Joint Cross-Validation estimator using $K$-Fold
-cross-validation instead.  See Algorithm \ref{alg:minvar_kfold_joint_cv} in the
-appendix.
-
-The same method variants also apply to this $K$-fold version.
 
 \end{enumerate}
 
