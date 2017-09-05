@@ -95,8 +95,8 @@ x = Variable(N)
 objective = Minimize(sum_squares(A @ x - b))
 constraints = [
     G @ x >= 0,
-    x >= 0,
-    sum(x) == trace
+    x >= 0
+    # sum(x) == trace
 ]
 prob = Problem(objective, constraints)
 result = prob.solve()
