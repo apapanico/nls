@@ -15,6 +15,8 @@ from cvxpy import *
 seed = 1532
 gamma = None
 
+np.random.seed(seed)
+
 
 def isotonic_regression(y, y_min=None, y_max=None):
   """Wrapper around SKlearn's isotonic regression"""
@@ -95,7 +97,7 @@ x = Variable(N)
 objective = Minimize(sum_squares(A @ x - b))
 constraints = [
     G @ x >= 0,
-    x >= 0
+    x >= 0,
     # sum(x) == trace
 ]
 prob = Problem(objective, constraints)
